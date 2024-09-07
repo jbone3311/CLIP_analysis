@@ -1,0 +1,24 @@
+''' Create a executable file from this script using the following command: 
+    pyinstaller --onefile --noconsole convert_and_resizeV2_0.py
+    pyinstaller --onefile --collect-all streamlit --exclude-module torch --exclude-module torchaudio --exclude-module transformers --exclude-module tensorboard --exclude-module avutil --exclude-module avformat --exclude-module avcodec --exclude-module avdevice --exclude-module avfilter --exclude-module c10_cuda --exclude-module torch_cuda convert_and_resizeV2_0.py
+
+    streamlit run convert_and_resizeV2_0.py
+    https://github.com/jbone3311/convert_and_resize.git 
+'''
+1. Set up a local Git repository:
+   - `git init`
+   - `git add .`
+   - `git commit -m "Initial commit"`
+
+2. Link the local repository to GitHub:
+   - `git remote add origin https://github.com/yourusername/your-repo.git`
+   - `git branch -M main`
+   - `git push -u origin main`
+
+3. Pull changes from GitHub:
+   - `git pull origin main`
+
+4. Push changes to GitHub:
+   - `git add .`
+   - `git commit -m "Your commit message"`
+   - `git push origin main`

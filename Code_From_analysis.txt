@@ -1,0 +1,377 @@
+
+###### FILENAME: clip_analysis.py ######
+
+import os
+import sys
+
+# Add the parent directory to the Python path
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+import logging
+import time
+from utils.image_utils import encode_image_to_base64, generate_unique_code
+from utils.json_utils import save_json, get_existing_json_files
+from utils.api_utils import analyze_image_detailed
+from constants import DEFAULTS
+
+def process_clip_images(config, api_url, timeout):
+    """
+    Process images in a directory and send them for CLIP analysis.
+
+    Args:
+        config: Configuration object.
+        api_url: Base URL of the API.
+        timeout: Timeout duration for the request.
+    """
+    failed_images = []
+    images_to_process = []
+    existing_json_files = []
+
+    # Traverse the image directory and its subdirectories
+    for subdir in os.listdir(config.image_directory):
+        subdir_path = os.path.join(config.image_directory, subdir)
+        if os.path.isdir(subdir_path):
+            logging.debug(f"Looking into directory: {subdir_path}")
+            batch_json_dir = os.path.join(subdir_path, 'json')
+            os.makedirs(batch_json_dir, exist_ok=True)
+
+            # Get existing JSON files
+            existing_json_files += get_existing_json_files(batch_json_dir)
+
+            for root, _, files in os.walk(subdir_path):
+                logging.debug(f"Processing images in directory: {root}")
+                image_files = [file for file in files if file.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                for file in image_files:
+                    images_to_process.append((root, file, batch_json_dir, subdir))
+
+    total_images = len(images_to_process)
+    if total_images == 0:
+        logging.info("No images found to process.")
+        return failed_images
+
+    logging.info(f"Total images to process: {total_images}")
+
+    # Initialize counters and timers
+    image_counter = len(existing_json_files)
+    total_processing_time = 0
+
+    for root, file, batch_json_dir, subdir in images_to_process:
+        clip_json_output_filename = f"{subdir}_{os.path.splitext(file)[0]}_clip_analysis.json"
+        clip_json_full_path = os.path.join(batch_json_dir, clip_json_output_filename)
+        
+        # Initialize the result dictionary
+        detailed_results = {
+            'filename': file,
+            'unique_code': generate_unique_code(os.path.join(root, file)),
+            'directory_name': subdir,
+            'model': config.model,
+            'prompts': {},
+            'analysis': {}
+        }
+
+        # Process CLIP analysis only if the JSON file does not exist
+        if clip_json_output_filename not in existing_json_files:
+            image_counter += 1
+            logging.info(f"{file} - {image_counter}/{total_images + len(existing_json_files)}")
+            file_path = os.path.join(root, file)
+            image_base64 = encode_image_to_base64(file_path)
+
+            if image_base64 is None:
+                logging.error(f"Failed to encode image: {file_path}")
+                failed_images.append(file_path)
+                continue
+
+            # Start timing the processing
+            start_time = time.time()
+
+            # Analyze the image in detail
+            detailed_results.update(analyze_image_detailed(image_base64, config.model, config.caption_types, api_url, timeout, config))
+
+            # Calculate processing time
+            processing_time = time.time() - start_time
+            total_processing_time += processing_time
+
+            # Display processing time and estimated remaining time
+            average_processing_time = total_processing_time / (image_counter - len(existing_json_files))
+            remaining_time = average_processing_time * (total_images + len(existing_json_files) - image_counter)
+            logging.info(f"Processing time for {file}: {processing_time:.2f} seconds")
+            logging.info(f"Estimated remaining time: {remaining_time:.2f} seconds")
+
+            # Save the combined JSON result
+            try:
+                save_json(clip_json_full_path, detailed_results)
+                logging.info(f"JSON output created: {clip_json_full_path}")
+            except Exception as e:
+                logging.error(f"Failed to save JSON for {file}: {e}")
+                failed_images.append(file_path)
+
+    if failed_images:
+        logging.error(f"Failed to process the following images: {failed_images}")
+
+    logging.info("Image processing completed successfully.")
+    return failed_images
+
+
+###### FILENAME: llm_analysis.py ######
+
+import json
+import os
+import logging
+from config import mask_api_key
+from utils.image_utils import encode_image_to_base64, generate_unique_code
+from utils.json_utils import save_json, get_existing_json_files
+from utils.api_utils import send_llm_request, is_llm_json_valid, create_data
+from constants import DEFAULTS
+
+def process_llm_images(config, api_url, timeout):
+    """
+    Process images in a directory and send them for LLM analysis.
+
+    Args:
+        config: Configuration object.
+        api_url: Base URL of the API.
+        timeout: Timeout duration for the request.
+    """
+    failed_images = []
+    images_to_process = []
+    existing_json_files = []
+
+    # Traverse the image directory and its subdirectories
+    for subdir in os.listdir(config.image_directory):
+        subdir_path = os.path.join(config.image_directory, subdir)
+        if os.path.isdir(subdir_path):
+            logging.debug(f"Looking into directory: {subdir_path}")
+            batch_json_dir = os.path.join(subdir_path, 'json')
+            os.makedirs(batch_json_dir, exist_ok=True)
+
+            # Get existing JSON files
+            existing_json_files += get_existing_json_files(batch_json_dir)
+
+            for root, _, files in os.walk(subdir_path):
+                logging.debug(f"Processing images in directory: {root}")
+                image_files = [file for file in files if file.lower().endswith(('.png', '.jpg', '.jpeg'))]
+                for file in image_files:
+                    images_to_process.append((root, file, batch_json_dir, subdir))
+
+    total_images = len(images_to_process)
+    if total_images == 0:
+        logging.info("No images found to process.")
+        return failed_images
+
+    logging.info(f"Total images to process: {total_images}")
+
+    # Initialize counters and timers
+    image_counter = len(existing_json_files)
+    total_processing_time = 0
+
+    for root, file, batch_json_dir, subdir in images_to_process:
+        llm_json_output_filename = f"{subdir}_{os.path.splitext(file)[0]}_llm_analysis.json"
+        llm_json_full_path = os.path.join(batch_json_dir, llm_json_output_filename)
+
+        # Process LLM analysis only if the JSON file does not exist
+        if llm_json_output_filename not in existing_json_files:
+            logging.info(f"LLM JSON file is invalid or does not exist for {file}. Running LLM analysis.")
+            llm_results = {}
+
+            # Hardcoded OpenAI settings
+            openai_enabled = config.llms.get('LLM_1', {}).get('enabled', False)
+            if openai_enabled:
+                logging.info(f"Running LLM analysis using OpenAI for {file}.")
+                for prompt_id in config.selected_prompts:
+                    image_base64 = encode_image_to_base64(os.path.join(root, file))
+                    data = {
+                        "model": config.llm_model,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": DEFAULTS['Prompt Options'][prompt_id]['PROMPT_TEXT']},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:image/jpeg;base64,{image_base64}"
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        "temperature": DEFAULTS['Prompt Options'][prompt_id]['TEMPERATURE'],
+                        "max_tokens": DEFAULTS['Prompt Options'][prompt_id]['MAX_TOKENS'],
+                        "top_p": 1.0,
+                        "frequency_penalty": 0.0,
+                        "presence_penalty": 0.0
+                    }
+                    logging.debug(f"Sending LLM request for prompt ID {prompt_id}")
+                    logging.debug(f"Data payload: {json.dumps(data, indent=2)}")
+                    api_key = config.get_openai_api_key()
+                    logging.debug(f"Using API Key: {mask_api_key(api_key)}")
+                    response = send_llm_request(data, api_key)
+                    if response:
+                        logging.debug(f"Received response for prompt ID {prompt_id}")
+                        llm_results[prompt_id] = response['choices'][0]['message']['content']
+                    else:
+                        logging.warning(f"No response received for prompt ID {prompt_id}.")
+                        llm_results[prompt_id] = None
+
+            # Additional LLMs from config
+            for llm_key, llm_config in config.llms.items():
+                if llm_key != 'LLM_1' and llm_config['enabled']:
+                    for prompt_id in config.selected_prompts:
+                        image_base64 = encode_image_to_base64(os.path.join(root, file))
+                        data = {
+                            "model": config.llm_model,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "text", "text": DEFAULTS['Prompt Options'][prompt_id]['PROMPT_TEXT']},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:image/jpeg;base64,{image_base64}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ],
+                            "temperature": DEFAULTS['Prompt Options'][prompt_id]['TEMPERATURE'],
+                            "max_tokens": DEFAULTS['Prompt Options'][prompt_id]['MAX_TOKENS'],
+                            "top_p": 1.0,
+                            "frequency_penalty": 0.0,
+                            "presence_penalty": 0.0
+                        }
+                        logging.debug(f"Sending LLM request for prompt ID {prompt_id}")
+                        logging.debug(f"Data payload: {json.dumps(data, indent=2)}")
+                        logging.debug(f"Using API Key: {mask_api_key(llm_config['api_key'])}")
+                        response = send_llm_request(data, llm_config['api_key'])
+                        if response:
+                            logging.debug(f"Received response for prompt ID {prompt_id}")
+                            llm_results[prompt_id] = response['choices'][0]['message']['content']
+                        else:
+                            logging.warning(f"No response received for prompt ID {prompt_id}.")
+                            llm_results[prompt_id] = None
+
+            # Check if llm_results is not empty before saving
+            if llm_results:
+                try:
+                    save_json(llm_json_full_path, llm_results)
+                except Exception as e:
+                    logging.error(f"Failed to save LLM JSON for {file}: {e}")
+                    failed_images.append(file)
+            else:
+                logging.info(f"No LLM results for {file}. Skipping saving LLM JSON.")
+
+    if failed_images:
+        logging.error(f"Failed to process the following images: {failed_images}")
+
+    logging.info("LLM analysis completed successfully.")
+    return failed_images
+
+
+###### FILENAME: test_process_llm_images.py ######
+
+import os
+import sys
+import json
+import logging
+import unittest
+
+# Add the parent directory to the Python path
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+from config import Config
+from utils.image_utils import encode_image_to_base64
+from utils.json_utils import save_json, get_existing_json_files
+from utils.api_utils import send_llm_request
+from constants import DEFAULTS
+from analysis.llm_analysis import process_llm_images
+
+# Test configuration variables
+TEST_IMAGE_DIRECTORY = 'test_images'
+TEST_SUBDIR = 'test_subdir'
+TEST_IMAGE_PATH = r"C:\Users\jiml\Dropbox\#AIArt\SourceCode\CODE_CLIP_Analysis\Images\2\RANDOS (20).png"
+REAL_IMAGE_DIRECTORY = 'real_images'  # Placeholder for the real directory path
+
+class TestProcessLLMImages(unittest.TestCase):
+
+    def test_process_llm_images(self):
+        # Fetch the API key from the environment variable
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            self.fail("Environment variable 'OPENAI_API_KEY' is not set.")
+
+        # Set up a test configuration
+        config = Config()
+        config.image_directory = TEST_IMAGE_DIRECTORY
+        config.llms = {
+            'LLM_1': {
+                'enabled': True,
+                'api_url': 'https://api.openai.com/v1/chat/completions',
+                'api_key': api_key
+            }
+        }
+        config.selected_prompts = ['1']
+
+        # Create test image directory and files
+        os.makedirs(os.path.join(TEST_IMAGE_DIRECTORY, TEST_SUBDIR, 'json'), exist_ok=True)
+        with open(os.path.join(TEST_IMAGE_DIRECTORY, TEST_SUBDIR, 'test_image.png'), 'wb') as f:
+            f.write(open(TEST_IMAGE_PATH, 'rb').read())
+
+        # Run the function
+        failed_images = process_llm_images(config, 'https://api.openai.com/v1/chat/completions', 30)
+
+        # Check results
+        self.assertFalse(failed_images, "There should be no failed images")
+
+        # Clean up
+        os.remove(os.path.join(TEST_IMAGE_DIRECTORY, TEST_SUBDIR, 'test_image.png'))
+        os.rmdir(os.path.join(TEST_IMAGE_DIRECTORY, TEST_SUBDIR, 'json'))
+        os.rmdir(os.path.join(TEST_IMAGE_DIRECTORY, TEST_SUBDIR))
+        os.rmdir(TEST_IMAGE_DIRECTORY)
+
+def real_api_test():
+    # Fetch the API key from the environment variable
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        logging.error("Environment variable 'OPENAI_API_KEY' is not set.")
+        return
+
+    # Ensure the real image directory exists
+    if not os.path.exists(REAL_IMAGE_DIRECTORY):
+        logging.error(f"Directory '{REAL_IMAGE_DIRECTORY}' does not exist.")
+        return
+
+    # Set up a real configuration
+    config = Config()
+    config.image_directory = REAL_IMAGE_DIRECTORY
+    config.llms = {
+        'LLM_1': {
+            'enabled': True,
+            'api_url': 'https://api.openai.com/v1/chat/completions',
+            'api_key': api_key
+        }
+    }
+    config.selected_prompts = ['1']
+
+    # Run the function with real data
+    failed_images = process_llm_images(config, 'https://api.openai.com/v1/chat/completions', 30)
+
+    if not failed_images:
+        logging.info("Real API test completed successfully without errors.")
+    else:
+        logging.error(f"Real API test failed for the following images: {failed_images}")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    # Uncomment the following line to run the real API test
+    real_api_test()
+
+
+###### FILENAME: __init__.py ######
+
+# analysis/__init__.py
+# This file ensures the `analysis` subdirectory is treated as a package.
+
+

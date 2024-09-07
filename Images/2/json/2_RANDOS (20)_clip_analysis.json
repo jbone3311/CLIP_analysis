@@ -1,0 +1,50 @@
+{
+    "filename": "RANDOS (20).png",
+    "unique_code": "208adf7a1b55225a4ca5fd283210b33b40077e9d4e7726ad745d9e05ce0906a4",
+    "directory_name": "2",
+    "model": "ViT-g-14/laion2B-s34B-b88K",
+    "prompts": {
+        "caption": "painting of two bald men with glasses and a green background",
+        "best": "painting of two bald men with glasses and a green background, style of mark ryden, by Matthias Jung, portrait of don knotts, two hovering twin nuns, many heads, hi - fructose art magazine, by John Brack, photo courtesy museum of art, chinese artist, ben folds portrait, very very unsettling, smooth symmetrical chin, oaks",
+        "fast": "painting of two bald men with glasses and a green background, style of mark ryden, mark ryden style, mark ryden in the style of, daniel clowes, siamese twins, mark ryden highly detailed, two heads, lowbrow surrealism, absurdist art, maarten schröder and tom bagshaw, by Mark Ryden",
+        "classic": "painting of two bald men with glasses and a green background, a portrait by Mark Ryden, tumblr, surrealism, style of mark ryden, mark ryden style, mark ryden in the style of",
+        "negative": "stunning african princess, ahri from league of legends, backlight photo sample, wearing xena armor, sparks of fire flying, armored sword blade, crystal maiden, battle map prop, gracefully belly dancing pose, stunning waterfall, purple crystals, beautiful flower, frostbite engine, rune-engraved armor, battle for whiterun city, greek amazon warrior, berries dripping"
+    },
+    "analysis": {
+        "medium": {
+            "a portrait": 0.231201171875,
+            "a surrealist painting": 0.215576171875,
+            "an oil painting": 0.190185546875,
+            "an ultrafine detailed painting": 0.188720703125,
+            "a painting": 0.1866455078125
+        },
+        "artist": {
+            "by Mark Ryden": 0.254150390625,
+            "inspired by Mark Ryden": 0.25390625,
+            "by Lambert Doomer": 0.250732421875,
+            "by Chip Zdarsky": 0.245361328125,
+            "by Rick Griffin": 0.2452392578125
+        },
+        "movement": {
+            "surrealism": 0.22412109375,
+            "neo-dada": 0.2227783203125,
+            "magic realism": 0.2220458984375,
+            "folk art": 0.2174072265625,
+            "pop surrealism": 0.216064453125
+        },
+        "trending": {
+            "tumblr": 0.1719970703125,
+            "deviantart": 0.15966796875,
+            "flickr": 0.12890625,
+            "cg society": 0.123046875,
+            "reddit": 0.11590576171875
+        },
+        "flavor": {
+            "style of mark ryden": 0.293212890625,
+            "mark ryden style": 0.28955078125,
+            "mark ryden in the style of": 0.285888671875,
+            "daniel clowes": 0.26953125,
+            "siamese twins": 0.26513671875
+        }
+    }
+}

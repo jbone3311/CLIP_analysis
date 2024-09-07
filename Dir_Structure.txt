@@ -1,0 +1,72 @@
+./
+    .gitignore
+    analysis_main.py
+    api_communication_log.json
+    CodeSheetConfig.ini
+    Code_From_analysis.txt
+    Code_From_CWD.txt
+    Code_From_utils.txt
+    COMPLETE_CODE.TXT
+    config.ini
+    config.py
+    constants.py
+    Dir_Structure.txt
+    LLM_CodeSheetV2.exe
+    PreGITbak.zip
+    test_llm.py
+    analysis/
+        clip_analysis.py
+        llm_analysis.py
+        test_process_llm_images.py
+        __init__.py
+    CODE_ data_analysis/
+        data_analysis.py
+    Images/
+        1/
+            RANDOS (30).png
+            json/
+                1_RANDOS (30)_clip_analysis.json
+        2/
+            FarSide (26).jpg
+            RANDOS (20).png
+            json/
+                2_FarSide (26)_clip_analysis.json
+                2_RANDOS (20)_clip_analysis.json
+        test/
+            FarSide (81).jpg
+            sample.jpg
+            json/
+                test_FarSide (81)_clip_analysis.json
+                test_sample_clip_analysis.json
+    Output/
+        api_communication_log.json
+        Log.log
+        CLIP_analysis/
+            1_best_Prompts.txt
+            1_caption_Prompts.txt
+            1_classic_Prompts.txt
+            1_fast_Prompts.txt
+            1_negative_Prompts.txt
+            2_best_Prompts.txt
+            2_caption_Prompts.txt
+            2_classic_Prompts.txt
+            2_fast_Prompts.txt
+            2_negative_Prompts.txt
+            test_best_Prompts.txt
+            test_caption_Prompts.txt
+            test_classic_Prompts.txt
+            test_fast_Prompts.txt
+            test_negative_Prompts.txt
+    test_images/
+        test_subdir/
+            test_image.jpg
+            test_image.png
+            json/
+                test_subdir_test_image_llm_analysis.json
+    utils/
+        api_analysis.py
+        api_utils.py
+        image_utils.py
+        json_utils.py
+        logging_setup.py
+        __init__.py
