@@ -20,6 +20,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Files
+LLM_CodeSh*.exe
+CLIP_Anal*.exe
+
 # Virtual environments
 venv/
 env/
