@@ -1,39 +1,45 @@
 import logging
 import time
+from dotenv import load_dotenv
 from config import Config
-from utils.logging_setup import setup_logging
-from analysis.clip_analysis import process_clip_images
-from analysis.llm_analysis import process_llm_images
-from utils.json_utils import process_existing_json_files
-from utils.api_utils import test_api
+from logging_setup import setup_logging
+from clip_analyzer import CLIPAnalyzer
+from llm_analyzer import LLMAnalyzer
+from json_utils import process_existing_json_files
+from api_utils import test_api
+
+load_dotenv()
 
 def main():
-    """
-    Main function to run the analysis.
-    """
-    config = Config()
-    setup_logging(config)
+    try:
+        config = Config()
+        setup_logging(config)
 
-    logging.info("### Processing New Batch ###")
+        logging.info("### Processing New Batch ###")
 
-    # Verify the API before starting the image processing
-    api_base_url = config.api_base_url
-    timeout = config.timeout
+        api_base_url = config.api_base_url
+        timeout = config.timeout
 
-    for attempt in range(3):
-        if test_api(api_base_url, timeout):
-            logging.info("API is responsive and working.")
-            process_clip_images(config, api_base_url, timeout)
-            process_llm_images(config, api_base_url, timeout)
-            break
+        # Increase timeout and number of attempts
+        for attempt in range(5):
+            if test_api(api_base_url, timeout * 2):
+                logging.info("API is responsive and working.")
+                clip_analyzer = CLIPAnalyzer(config)
+                clip_analyzer.process_images()
+                llm_analyzer = LLMAnalyzer(config)
+                llm_analyzer.process_images()
+                break
+            else:
+                logging.warning(f"API at {api_base_url} is not responsive. Attempt {attempt + 1} failed.")
+                time.sleep(5)  # Increased delay between attempts
         else:
-            logging.warning("API at %s is not responsive. Attempt %d failed.", api_base_url, attempt + 1)
-            time.sleep(2 ** attempt)  # Exponential backoff
-    else:
-        logging.error("API at %s is not responsive after 3 attempts. Skipping.", api_base_url)
+            logging.error(f"API at {api_base_url} is not responsive after 5 attempts. Skipping image processing.")
+            logging.info("Please check that the API is enabled in Automatic1111 settings and the URL is correct.")
 
-    # Process existing JSON files to generate prompt lists
-    process_existing_json_files(config)
+        process_existing_json_files(config)
+
+    except Exception as e:
+        logging.exception(f"An unexpected error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
