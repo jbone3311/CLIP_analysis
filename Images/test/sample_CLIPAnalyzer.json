@@ -3,41 +3,41 @@
     "filename": "sample.jpg",
     "unique_hash": "e91a2607b710ab74ec49ce3d4fa31682",
     "date_created": 1719698631.778034,
-    "date_processed": 1725849592.506278,
+    "date_processed": 1725850121.1236887,
     "file_size": 825
   },
   "analysis": {
     "caption": {
       "result": {
-        "prompt": "a close up of a red background with a white border"
+        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, gradient red, only red colour, colors red, chromostereopsis, ussr flag, red color bleed, red, plain red background, background of classic red cloth"
       },
       "model": "ViT-L-14/openai",
       "mode": "caption"
     },
     "best": {
       "result": {
-        "prompt": "a close up of a red background with a white border, viewed from bird's-eye, null, zero - hour, eeire, .ai, 27, unshaded, the sky is red, bright vivid color hues:1, tabloid, nothingness, colored fog, 0 0 0, no green, cgi rendering, bloody, 2000"
+        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, gradient red, only red colour, colors red, chromostereopsis, ussr flag, red color bleed, red, plain red background, background of classic red cloth"
       },
       "model": "ViT-L-14/openai",
       "mode": "best"
     },
     "fast": {
       "result": {
-        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, gradient red, only red colour, colors red, chromostereopsis, ussr flag, red color bleed, red, plain red background, red color"
+        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, only red colour, gradient red, colors red, chromostereopsis, ussr flag, red color bleed, red, plain red background, background of classic red cloth"
       },
       "model": "ViT-L-14/openai",
       "mode": "fast"
     },
     "classic": {
       "result": {
-        "prompt": "a close up of a red background with a white border, a photo inspired by Malevich, cg society, synthetism, cadmium red, color 1970, gradient white to red"
+        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, gradient red, only red colour, colors red, chromostereopsis, ussr flag, red color bleed, red, plain red background, background of classic red cloth"
       },
       "model": "ViT-L-14/openai",
       "mode": "classic"
     },
     "negative": {
       "result": {
-        "prompt": "shrubs and flowers. esao andrews, green witch walking her garden, ornate headdress, in style of tom bagshaw, purple and black, lovely dark autumn princess, adorable and whimsical, cushart krentz, purple crystal glass inlays, angelic wings on her back, polymer clay earrings, shiny jewels"
+        "prompt": "a close up of a red background with a white border, cadmium red, color 1970, gradient white to red, 8 k very red colors, color red, the color red, gradient red, colors red, only red colour, chromostereopsis, ussr flag, red color bleed, red, plain red background, background of classic red cloth"
       },
       "model": "ViT-L-14/openai",
       "mode": "negative"

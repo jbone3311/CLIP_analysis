@@ -1,0 +1,46 @@
+{
+  "file_info": {
+    "filename": "00160-1692874386-sd_xl_base_1.0-7-DPM++ 2M Karras-1024x1024 - 20240603031306.png",
+    "unique_hash": "3ea3a798cfeec54adfd8a2b69e8bf687",
+    "date_created": 1725850036.7670283,
+    "date_processed": 1725850540.649733,
+    "file_size": 1265778
+  },
+  "analysis": {
+    "caption": {
+      "result": {
+        "prompt": "painting of a mushroom with a brown cap and green leaves"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "caption"
+    },
+    "best": {
+      "result": {
+        "prompt": "painting of a mushroom with a brown cap and green leaves, mark van haitsma, very detailed \u00bb, michael page, studio mir, art \u00bb, cgsociety - w 1 0 2 4 - n 8 - i, by Trevor Brown, 64x64, peter guthrie, a painting of white silver, chambliss giobbi, poisonous, pencil painting"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "best"
+    },
+    "fast": {
+      "result": {
+        "prompt": "painting of a mushroom with a brown cap and green leaves, by Ken Danby, by Gerard Houckgeest, realistic oil on linen, photorealism oil painting, photorealistic oil painting, award-winning oil painting, realistic illustrative painting, a photorealistic painting, hyperdetailed photorealism\u201d, detailed realism in painting, by Arie Smit, photorealistic oil on canvas"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "fast"
+    },
+    "classic": {
+      "result": {
+        "prompt": "painting of a mushroom with a brown cap and green leaves, a photorealistic painting by Ken Danby, behance, photorealism, realistic oil on linen, photorealism oil painting, photorealistic oil painting"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "classic"
+    },
+    "negative": {
+      "result": {
+        "prompt": "darkseid as mini figure, digital art #oneshotgame, sketchy expressive linework, human and dragon fusion, wearing chains, teal eyebrows, oc commission, the robot wearing her human mask, light academia aesthetic, extra limb, ifunny"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "negative"
+    }
+  }
+}

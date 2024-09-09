@@ -37,7 +37,6 @@ class Config:
 
         # Model Settings
         self.clip_model_name = os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai')
-        self.clip_mode = os.getenv('CLIP_MODE', 'fast')
         self.caption_types = os.getenv('CAPTION_TYPES', 'caption,best,fast,classic,negative').split(',')
 
         # LLM Settings

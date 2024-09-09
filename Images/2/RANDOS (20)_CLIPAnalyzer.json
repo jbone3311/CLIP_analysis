@@ -3,7 +3,7 @@
     "filename": "RANDOS (20).png",
     "unique_hash": "453010d374bc35ac709cbdfc03068cc8",
     "date_created": 1719698417.1153545,
-    "date_processed": 1725849542.9126794,
+    "date_processed": 1725850471.3985157,
     "file_size": 1167572
   },
   "analysis": {
@@ -16,7 +16,7 @@
     },
     "best": {
       "result": {
-        "prompt": "painting of two bald men with glasses and a green background, japanese pop surrealism, cd cover artwork, by Yang Weizhen, unique heads, two hovering twin nuns, anton semenov, 1 0 0 0 best album covers, portrait of family of three, 2 0 0 7, academy headmaster, stunning character art, orbital, ( ( bit flip | god of ai art ) )"
+        "prompt": "painting of two bald men with glasses and a green background, japanese pop surrealism, cd cover artwork, by Yang Weizhen, unique heads, two hovering twin nuns, anton semenov, 1 0 0 0 best album covers, portrait of family of three, 2 0 0 7, academy headmaster, green square, design milk, yasuhiko yoshikazu"
       },
       "model": "ViT-L-14/openai",
       "mode": "best"

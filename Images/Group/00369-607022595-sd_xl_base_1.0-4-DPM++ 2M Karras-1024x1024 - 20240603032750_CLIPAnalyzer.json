@@ -1,0 +1,46 @@
+{
+  "file_info": {
+    "filename": "00369-607022595-sd_xl_base_1.0-4-DPM++ 2M Karras-1024x1024 - 20240603032750.png",
+    "unique_hash": "a3acdbdf839d12c2d9f9a4af2b759eac",
+    "date_created": 1725850036.7800305,
+    "date_processed": 1725850583.599654,
+    "file_size": 1507528
+  },
+  "analysis": {
+    "caption": {
+      "result": {
+        "prompt": "painting of a purple iris flower with a yellow center"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "caption"
+    },
+    "best": {
+      "result": {
+        "prompt": "painting of a purple iris flower with a yellow center, jen atkin, kai fine art, peter tarka, elegant drawing, gallant, portrait of figther jet evading, centred in image, holding intimately, glen, f"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "best"
+    },
+    "fast": {
+      "result": {
+        "prompt": "painting of a purple iris flower with a yellow center, flower artworks society, blue iris, round iris, detailed coloured pencil, by Peter Churcher, iris compiet, by Robert Bateman, centered thin ring iris, iris, encompass violet irises, focus on iris, botanical artwork, light bown iris, detailed matted painting, by Frances Jetter"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "fast"
+    },
+    "classic": {
+      "result": {
+        "prompt": "painting of a purple iris flower with a yellow center, a photorealistic painting by Peter Churcher, deviantart, photorealism, flower artworks society, blue iris, round iris"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "classic"
+    },
+    "negative": {
+      "result": {
+        "prompt": "m4 sopmod ii girls frontline, adventure time style, red and black costume!!!, archie comic style, digital art #oneshotgame, poorly drawn, chucky style, oc commission, his eyes are red and glowing, white horns, cheese and pepperoni, green hair, messy black / red hair, jason voorhees, k-on!"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "negative"
+    }
+  }
+}

@@ -22,7 +22,7 @@ class CLIPAnalyzer(Analyzer):
         super().__init__(config.image_directory)
         self.config = config
         self.logger = logging.getLogger('CLIP_API')
-        self.enabled_modes = self.config._get_enabled_modes()
+        self.enabled_modes = self._get_enabled_modes()
 
     def _get_enabled_modes(self):
         return [mode for mode, enabled in {
@@ -46,7 +46,7 @@ class CLIPAnalyzer(Analyzer):
         payload = {
             "image": image_base64,
             "model": self.config.clip_model_name,
-            "mode": mode
+            "mode": mode  # Include the mode in the payload
         }
         
         try:
@@ -68,7 +68,7 @@ class CLIPAnalyzer(Analyzer):
                 'mode': mode
             }
         except requests.RequestException as e:
-            self.logger.error(f"Error in CLIP API request: {str(e)}")
+            self.logger.error(f"Error in CLIP API request (mode: {mode}): {str(e)}")
             self.logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
             raise
 
@@ -86,6 +86,7 @@ class CLIPAnalyzer(Analyzer):
             
             results = {}
             for mode in self.enabled_modes:
+                self.logger.info(f"Analyzing image {os.path.basename(image_path)} with mode: {mode}")
                 results[mode] = self.send_clip_request(image_base64, mode)
             
             file_info = self._get_file_info(image_path)

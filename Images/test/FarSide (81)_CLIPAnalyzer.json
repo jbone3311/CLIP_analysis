@@ -3,20 +3,20 @@
     "filename": "FarSide (81).jpg",
     "unique_hash": "8d20662a40688e0d8672bdf9d0331374",
     "date_created": 1719733492.1300747,
-    "date_processed": 1725849566.0922875,
+    "date_processed": 1725850118.1009045,
     "file_size": 388089
   },
   "analysis": {
     "caption": {
       "result": {
-        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house"
+        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house, gary larson, suburbia, bumper cars, inspired by The Family Circus, mowing of the hay, cartoon from the 90's, on a green lawn, by The Family Circus, parents watching, driving in a little toy car, inevitability, advanced automobile, flying cars, prototype car"
       },
       "model": "ViT-L-14/openai",
       "mode": "caption"
     },
     "best": {
       "result": {
-        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house, gary larson, the coming ai singularity, toaster, bumper cars, sitting in an armchair, as well as the handyboy, brood spreading, by Kathleen Browne, boarded up, supercar, chaotic revenge, crt, npc, pulitzer-prized photo, helpless"
+        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house, gary larson, suburbia, bumper cars, inspired by The Family Circus, mowing of the hay, cartoon from the 90's, on a green lawn, by The Family Circus, parents watching, driving in a little toy car, inevitability, advanced automobile, flying cars, prototype car"
       },
       "model": "ViT-L-14/openai",
       "mode": "best"
@@ -30,14 +30,14 @@
     },
     "classic": {
       "result": {
-        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house inspired by The Family Circus, pinterest, american realism, gary larson, suburbia, bumper cars"
+        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house, gary larson, suburbia, bumper cars, inspired by The Family Circus, mowing of the hay, cartoon from the 90's, on a green lawn, by The Family Circus, parents watching, driving in a little toy car, inevitability, advanced automobile, flying cars, prototype car"
       },
       "model": "ViT-L-14/openai",
       "mode": "classic"
     },
     "negative": {
       "result": {
-        "prompt": "steampunk aztec owl pocketwatch, hyper light drifter color pallet, dark sorceress full view, magical school student uniform, halfbody headshot, kitsune inspired armor, digital painting of quetzalcoatl, adventurer outfit large cloak, portrait sophie mudd, wpap"
+        "prompt": "a cartoon of a dog pulling a lawn mower in front of a house, gary larson, suburbia, bumper cars, inspired by The Family Circus, mowing of the hay, cartoon from the 90's, by The Family Circus, on a green lawn, parents watching, driving in a little toy car, inevitability, advanced automobile, flying cars, prototype car"
       },
       "model": "ViT-L-14/openai",
       "mode": "negative"
