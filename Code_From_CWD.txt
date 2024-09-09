@@ -1,0 +1,837 @@
+
+###### FILENAME: analysis_main.py ######
+
+import logging
+from dotenv import load_dotenv
+from config import Config
+from logging_setup import setup_logging
+from clip_analyzer import CLIPAnalyzer
+from llm_analyzer import LLMAnalyzer
+from json_utils import process_existing_json_files
+
+
+load_dotenv()
+
+def main():
+    try:
+        config = Config()
+        setup_logging(config)
+
+        logging.info("### Processing New Batch ###")
+
+        if config.enable_clip_analysis:
+            logging.info("Running CLIP Analyzer...")
+            clip_analyzer = CLIPAnalyzer(config)
+            clip_analyzer.process_images()
+
+        if config.enable_llm_analysis:
+            logging.info("Running LLM Analyzer...")
+            llm_analyzer = LLMAnalyzer(config)
+            llm_analyzer.process_images()
+
+        if config.enable_json_processing:
+            logging.info("Processing existing JSON files...")
+            process_existing_json_files(config)
+
+    except Exception as e:
+        logging.exception(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
+
+
+###### FILENAME: analyzer.py ######
+
+import os
+import json
+import logging
+import time
+from abc import ABC, abstractmethod
+from typing import Dict, List, Any
+from image_utils import generate_unique_code  # Make sure this import is correct
+import json_utils
+
+class Analyzer(ABC):
+    def __init__(self, config):
+        self.config = config
+        self.directory = config.image_directory
+        self.output_directory = config.output_directory
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.enabled_modes = self._get_enabled_modes()
+
+    @abstractmethod
+    def _get_enabled_modes(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    def analyze_image(self, image_path: str, modes: List[str]) -> Dict[str, Any]:
+        pass
+
+    def process_images(self):
+        existing_files = json_utils.get_existing_json_files(self.output_directory)
+        for image_path in self.get_image_files():
+            json_filename = f"{os.path.splitext(os.path.basename(image_path))[0]}_{self.__class__.__name__}.json"
+            json_path = os.path.join(self.output_directory, json_filename)
+
+            if json_filename in existing_files:
+                existing_data = self._load_existing_json(json_path, image_path)
+                if existing_data:
+                    new_modes = self._get_new_modes(existing_data)
+                    if not new_modes:
+                        self.logger.info(f"Skipping {image_path}, all modes already processed.")
+                        continue
+                    else:
+                        self.logger.info(f"Processing new modes for {image_path}: {new_modes}")
+                        result = self.analyze_image(image_path, new_modes)
+                        self._update_existing_json(json_path, result)
+                else:
+                    result = self.analyze_image(image_path, self.enabled_modes)
+                    self.save_result(json_path, result)
+            else:
+                result = self.analyze_image(image_path, self.enabled_modes)
+                self.save_result(json_path, result)
+
+    def _load_existing_json(self, json_path: str, image_path: str) -> Dict[str, Any]:
+        try:
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+
+            current_hash = generate_unique_code(image_path)
+            if current_hash != data['file_info']['unique_hash']:
+                self.logger.warning(f"Hash mismatch for {image_path}. Reprocessing image.")
+                return {}
+
+            return data
+        except Exception as e:
+            self.logger.error(f"Error loading JSON for {json_path}: {str(e)}")
+            return {}
+
+    def _get_new_modes(self, existing_data: Dict[str, Any]) -> List[str]:
+        existing_modes = set(existing_data['analysis'].keys())
+        return [mode for mode in self.enabled_modes if mode not in existing_modes]
+
+    def _update_existing_json(self, json_path: str, new_data: Dict[str, Any]):
+        try:
+            with open(json_path, 'r+') as f:
+                existing_data = json.load(f)
+                existing_data['analysis'].update(new_data['analysis'])
+                existing_data['file_info']['date_processed'] = time.time()
+                f.seek(0)
+                json.dump(existing_data, f, indent=4)
+                f.truncate()
+            self.logger.info(f"Updated JSON file: {json_path}")
+        except Exception as e:
+            self.logger.error(f"Error updating JSON file {json_path}: {str(e)}")
+
+    def save_result(self, json_path: str, result: Dict[str, Any]):
+        json_filename = f"{os.path.splitext(os.path.basename(json_path))[0]}_{self.__class__.__name__}.json"
+        json_path = os.path.join(self.output_directory, json_filename)
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        with open(json_path, 'w') as f:
+            json.dump(result, f, indent=4)
+        self.logger.info(f"Saved results to {json_path}")
+
+    def get_image_files(self):
+        for root, _, files in os.walk(self.directory):
+            for file in files:
+                if file.lower().endswith(tuple(self.config.image_file_extensions)):
+                    yield os.path.join(root, file)
+
+    def _get_file_info(self, image_path: str) -> Dict[str, Any]:
+        try:
+            unique_hash = generate_unique_code(image_path)
+        except NameError:
+            self.logger.warning("generate_unique_code function not found. Using filename as hash.")
+            unique_hash = os.path.basename(image_path)
+        
+        return {
+            'filename': os.path.basename(image_path),
+            'unique_hash': unique_hash,
+            'date_created': os.path.getctime(image_path),
+            'date_processed': time.time(),
+            'file_size': os.path.getsize(image_path)
+        }
+
+
+
+###### FILENAME: api_utils.py ######
+
+import logging
+import time
+import json
+import os
+from functools import wraps
+from typing import Callable, Dict, Any, Optional
+import requests
+
+def log_api_conversation(logger: logging.Logger, data: Dict[str, Any]):
+    logger.debug("API Conversation:")
+    logger.debug(json.dumps(data, indent=2))
+
+def retry_with_backoff(max_retries: int = 3, backoff_factor: int = 2):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            retries = 0
+            while retries < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    wait = backoff_factor ** retries
+                    logging.warning(f"Request failed: {e}. Retrying in {wait} seconds...")
+                    time.sleep(wait)
+                    retries += 1
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@retry_with_backoff()
+def send_llm_request(data: Dict[str, Any], api_key: str, api_url: str, timeout: float = 30.0) -> Dict[str, Any]:
+    llm_logger = logging.getLogger('LLM_API')
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    try:
+        response = requests.post(api_url, json=data, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        response_data = response.json()
+        log_api_conversation(llm_logger, {"request": data, "response": response_data})
+        return response_data
+    except requests.RequestException as e:
+        llm_logger.error(f"Error in LLM API request: {str(e)}")
+        llm_logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
+        raise
+
+def safe_api_call(func: Callable[..., Dict[str, Any]]) -> Callable[..., Optional[Dict[str, Any]]]:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Optional[Dict[str, Any]]:
+        try:
+            return func(*args, **kwargs)
+        except requests.RequestException as e:
+            logging.error(f"API call failed: {str(e)}")
+            return None
+    return wrapper
+
+
+###### FILENAME: clip_analyzer.py ######
+
+import os
+import logging
+import requests
+from typing import Dict, Any, List
+from analyzer import Analyzer
+from api_utils import retry_with_backoff, log_api_conversation
+from image_utils import encode_image_to_base64
+import json_utils  # Add this import
+
+class CLIPAnalyzer(Analyzer):
+    def __init__(self, config):
+        super().__init__(config)
+        self.logger = logging.getLogger('CLIP_API')
+
+    def _get_enabled_modes(self):
+        return [mode for mode, enabled in {
+            'caption': self.config.enable_caption,
+            'best': self.config.enable_best,
+            'fast': self.config.enable_fast,
+            'classic': self.config.enable_classic,
+            'negative': self.config.enable_negative
+        }.items() if enabled]
+
+    @retry_with_backoff(max_retries=3, backoff_factor=2)
+    def send_clip_request(self, image_base64: str, mode: str) -> Dict[str, Any]:
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "image": image_base64,
+            "model": self.config.clip_model_name,
+            "mode": mode
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.config.api_base_url}/interrogator/prompt", 
+                json=payload, 
+                headers=headers, 
+                timeout=self.config.timeout
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            
+            log_payload = {**payload, "image": "[BASE64_IMAGE_CONTENT]"}
+            log_api_conversation(self.logger, {"request": log_payload, "response": response_data})
+            
+            return {
+                'result': response_data,
+                'model': self.config.clip_model_name,
+                'mode': mode
+            }
+        except requests.RequestException as e:
+            self.logger.error(f"Error in CLIP API request (mode: {mode}): {str(e)}")
+            self.logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
+            raise
+
+    def analyze_image(self, image_path: str, modes: List[str]) -> Dict[str, Any]:
+        try:
+            image_base64 = encode_image_to_base64(image_path)
+            if image_base64 is None:
+                raise ValueError(f"Failed to encode image: {image_path}")
+            
+            results = {}
+            for mode in modes:
+                self.logger.info(f"Analyzing image {os.path.basename(image_path)} with mode: {mode}")
+                results[mode] = self.send_clip_request(image_base64, mode)
+            
+            return {
+                'file_info': self._get_file_info(image_path),
+                'analysis': results
+            }
+        except Exception as e:
+            self.logger.error(f"Error analyzing image {image_path}: {str(e)}")
+            return {
+                'file_info': self._get_file_info(image_path),
+                'analysis': {'error': str(e)}
+            }
+
+    def _get_file_info(self, image_path: str) -> Dict[str, Any]:
+        return {
+            'filename': os.path.basename(image_path),
+            'unique_hash': generate_unique_code(image_path),
+            'date_created': os.path.getctime(image_path),
+            'date_processed': time.time(),
+            'file_size': os.path.getsize(image_path)
+        }
+
+    def process_images(self):
+        existing_files = json_utils.get_existing_json_files(self.config.output_directory)
+        for image_path in self.get_image_files():
+            if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__, self.config):
+                result = self.analyze_image(image_path, self.enabled_modes)
+                self.save_result(image_path, result)
+
+    def get_image_files(self):
+        for root, _, files in os.walk(self.config.image_directory):
+            for file in files:
+                if file.lower().endswith(tuple(self.config.image_file_extensions)):
+                    yield os.path.join(root, file)
+
+
+
+###### FILENAME: config.py ######
+
+import os
+from dotenv import load_dotenv
+from typing import Dict, Any
+
+load_dotenv()
+
+class Config:
+    """
+    Configuration class for managing application settings.
+    Loads settings from environment variables with default values.
+    """
+
+    def __init__(self):
+        # API Keys
+        self.serper_api_key = os.getenv('SERPER_API_KEY')
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        self.google_api_key = os.getenv('GOOGLE_API_KEY')
+        self.google_cse_id = os.getenv('GOOGLE_CSE_ID')
+        self.agentops_api_key = os.getenv('AGENTOPS_API_KEY')
+
+        # API Configuration
+        self.api_base_url = os.getenv('API_BASE_URL', 'http://127.0.0.1:7860')
+        self.timeout = int(os.getenv('TIMEOUT', '30'))
+
+        # Directory Settings
+        self.image_directory = os.getenv('IMAGE_DIRECTORY', 'Images')
+        self.output_directory = os.getenv('OUTPUT_DIRECTORY', 'Output')
+
+        # Logging Configuration
+        self.logging_level = os.getenv('LOGGING_LEVEL', 'DEBUG')
+        self.logging_format = os.getenv('LOGGING_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.log_to_console = os.getenv('LOG_TO_CONSOLE', 'True').lower() == 'true'
+        self.log_to_file = os.getenv('LOG_TO_FILE', 'True').lower() == 'true'
+        self.log_file = os.getenv('LOG_FILE', 'Log.log')
+        self.log_mode = 'w'  # Always overwrite log file
+        self.log_api_communication = os.getenv('LOG_API_COMMUNICATION', 'True').lower() == 'true'
+
+        # Model Settings
+        self.clip_model_name = os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai')
+        self.caption_types = os.getenv('CAPTION_TYPES', 'caption,best,fast,classic,negative').split(',')
+
+        # LLM Settings
+        self.llm_api_base_url = os.getenv('LLM_API_BASE_URL', 'https://api.openai.com/v1/chat/completions')
+        self.llm_model = os.getenv('LLM_MODEL', 'gpt-4')
+        self.llm_system_content = os.getenv('LLM_SYSTEM_CONTENT', 'Your default system content here')
+
+        # File Handling Settings
+        self.create_individual_files = os.getenv('CREATE_INDIVIDUAL_FILES', 'True').lower() == 'true'
+        self.create_prompt_list = os.getenv('CREATE_PROMPT_LIST', 'True').lower() == 'true'
+        self.create_master_files = os.getenv('CREATE_MASTER_FILES', 'True').lower() == 'true'
+        self.list_file_mode = os.getenv('LIST_FILE_MODE', 'w')
+        self.master_analysis_filename = os.getenv('MASTER_ANALYSIS_FILENAME', 'master_analysis.json')
+        self.process_json_without_images = os.getenv('PROCESS_JSON_WITHOUT_IMAGES', 'False').lower() == 'true'
+
+        # Image File Extensions
+        self.image_file_extensions = os.getenv('IMAGE_FILE_EXTENSIONS', '.png,.jpg,.jpeg').split(',')
+
+        # LLM Configurations
+        self.llms = self._load_llm_configs()
+
+        # Analysis Control
+        self.enable_clip_analysis = os.getenv('ENABLE_CLIP_ANALYSIS', 'True').lower() == 'true'
+        self.enable_llm_analysis = os.getenv('ENABLE_LLM_ANALYSIS', 'True').lower() == 'true'
+        self.enable_json_processing = os.getenv('ENABLE_JSON_PROCESSING', 'True').lower() == 'true'
+
+        # Retry Configuration
+        self.retry_limit = int(os.getenv('RETRY_LIMIT', '5'))
+        self.sleep_interval = int(os.getenv('SLEEP_INTERVAL', '5'))
+
+        # LLM Parameters
+        self.temperature = float(os.getenv('TEMPERATURE', '0.7'))
+        self.max_tokens = int(os.getenv('MAX_TOKENS', '300'))
+        self.top_p = float(os.getenv('TOP_P', '1.0'))
+        self.frequency_penalty = float(os.getenv('FREQUENCY_PENALTY', '0.0'))
+        self.presence_penalty = float(os.getenv('PRESENCE_PENALTY', '0.0'))
+
+        # Selected Prompts
+        self.selected_prompts = [p for p in os.getenv('SELECTED_PROMPTS', '').split(',') if p]
+
+        # New Analysis Modes
+        self.enable_caption = os.getenv('ENABLE_CAPTION', 'True').lower() == 'true'
+        self.enable_best = os.getenv('ENABLE_BEST', 'True').lower() == 'true'
+        self.enable_fast = os.getenv('ENABLE_FAST', 'True').lower() == 'true'
+        self.enable_classic = os.getenv('ENABLE_CLASSIC', 'True').lower() == 'true'
+        self.enable_negative = os.getenv('ENABLE_NEGATIVE', 'True').lower() == 'true'
+
+    def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:
+        llms = {}
+        for i in range(1, 5):  # Assuming a maximum of 4 LLM configurations
+            enabled = os.getenv(f'LLM_{i}_ENABLED', 'False').lower() == 'true'
+            if enabled:
+                llms[f'LLM_{i}'] = {
+                    'api_url': os.getenv(f'LLM_{i}_API_URL'),
+                    'api_key': os.getenv(f'LLM_{i}_API_KEY'),
+                }
+        return llms
+
+    def get_openai_api_key(self) -> str:
+        return self.openai_api_key  # Make sure this attribute is set in the __init__ method
+
+    def get_prompt_options(self, prompt_id: str) -> Dict[str, Any]:
+        return {
+            'PROMPT_TEXT': os.getenv(f'{prompt_id.upper()}_PROMPT_TEXT', 'Default prompt text'),
+            'TEMPERATURE': float(os.getenv(f'{prompt_id.upper()}_TEMPERATURE', str(self.temperature))),
+            'MAX_TOKENS': int(os.getenv(f'{prompt_id.upper()}_MAX_TOKENS', str(self.max_tokens)))
+        }
+
+    def _get_enabled_modes(self):
+        return [mode for mode, enabled in {
+            'caption': self.enable_caption,
+            'best': self.enable_best,
+            'fast': self.enable_fast,
+            'classic': self.enable_classic,
+            'negative': self.enable_negative
+        }.items() if enabled]
+
+    def __str__(self) -> str:
+        return f"""
+        Configuration:
+        - API Base URL: {self.api_base_url}
+        - Timeout: {self.timeout}
+        - Image Directory: {self.image_directory}
+        - Output Directory: {self.output_directory}
+        - CLIP Model: {self.clip_model_name}
+        - CLIP Mode: {self.clip_mode}
+        - LLM Model: {self.llm_model}
+        - Enable CLIP Analysis: {self.enable_clip_analysis}
+        - Enable LLM Analysis: {self.enable_llm_analysis}
+        - Enable JSON Processing: {self.enable_json_processing}
+        """
+
+
+###### FILENAME: image_utils.py ######
+
+import base64
+import hashlib
+import logging
+from typing import Optional, Tuple
+from PIL import Image, UnidentifiedImageError
+from io import BytesIO
+import os
+
+def generate_unique_code(image_path: str) -> str:
+    with open(image_path, "rb") as f:
+        file_hash = hashlib.md5()
+        chunk = f.read(8192)
+        while chunk:
+            file_hash.update(chunk)
+            chunk = f.read(8192)
+    return file_hash.hexdigest()
+
+def resize_image(image: Image.Image, max_size: Tuple[int, int] = (512, 512)) -> Image.Image:
+    """Resize the image to fit within max_size while maintaining aspect ratio.
+
+    Args:
+        image (PIL.Image): Image to resize.
+        max_size (tuple): Maximum width and height.
+
+    Returns:
+        PIL.Image: Resized image.
+    """
+    image.thumbnail(max_size, Image.LANCZOS)
+    return image
+
+def encode_image_to_base64(image_path: str) -> str:
+    try:
+        with Image.open(image_path) as img:
+            # Convert image to RGB if it's not
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            with io.BytesIO() as buffer:
+                img.save(buffer, format="JPEG")
+                return base64.b64encode(buffer.getvalue()).decode()
+    except UnidentifiedImageError:
+        logging.error(f"Cannot identify image file: {image_path}")
+    except IOError:
+        logging.error(f"Cannot open image file: {image_path}")
+    except Exception as e:
+        logging.error(f"Error processing image {image_path}: {str(e)}")
+    return None
+
+def process_image_for_analysis(image_path: str) -> Optional[str]:
+    """Process an image for analysis by resizing and converting to JPEG if needed.
+
+    Args:
+        image_path (str): Path to the image file.
+
+    Returns:
+        Optional[str]: Base64 encoded string of the processed image, or None if an error occurs.
+    """
+    try:
+        with Image.open(image_path) as img:
+            # Check if the image is already 512x512 or smaller and in JPEG format
+            if img.size[0] <= 512 and img.size[1] <= 512 and img.format == 'JPEG':
+                return encode_image_to_base64(image_path)
+            else:
+                # Resize and convert to JPEG
+                img = resize_image(img)
+                with BytesIO() as imgio:
+                    img.save(imgio, 'JPEG')
+                    imgio.seek(0)
+                    data = base64.b64encode(imgio.getvalue())
+                    return data.decode('utf8')
+    except FileNotFoundError as e:
+        logging.error("Image file not found: %s - %s", image_path, e)
+    except UnidentifiedImageError as e:
+        logging.error("Cannot identify image file: %s - %s", image_path, e)
+    except Exception as e:
+        logging.error("Error processing image for analysis: %s", e)
+    return None
+
+
+###### FILENAME: json_utils.py ######
+
+import os
+import json
+import logging
+from typing import Dict, Any, List
+
+def save_json(file_path: str, data: Dict[str, Any]) -> None:
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as json_file:
+                existing_data = json.load(json_file)
+            
+            # Update file_info
+            existing_data['file_info'] = data['file_info']
+            
+            # Merge analysis results
+            for mode, result in data['analysis'].items():
+                if mode not in existing_data['analysis']:
+                    existing_data['analysis'][mode] = result
+                elif result['model'] != existing_data['analysis'][mode]['model']:
+                    existing_data['analysis'][f"{mode}_{result['model']}"] = result
+            
+            data = existing_data
+        
+        with open(file_path, 'w', encoding='utf-8') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
+        logging.info(f"JSON output created/updated: {file_path}")
+    except IOError as e:
+        logging.error(f"Failed to create or write to file: {e}, Path attempted: {file_path}")
+
+def get_existing_json_files(directory: str) -> List[str]:
+    json_files = []
+    for root, _, files in os.walk(directory):
+        json_files.extend([file for file in files if file.lower().endswith('.json')])
+    return json_files
+
+def should_process_file(file_path: str, existing_files: List[str], analyzer_name: str, config) -> bool:
+    json_filename = f"{os.path.splitext(os.path.basename(file_path))[0]}_{analyzer_name}.json"
+    if json_filename in existing_files:
+        with open(os.path.join(config.output_directory, json_filename), 'r') as f:
+            existing_data = json.load(f)
+        
+        # Check if all enabled modes are already processed
+        existing_modes = set(existing_data['analysis'].keys())
+        required_modes = set(config._get_enabled_modes())
+        
+        if required_modes.issubset(existing_modes):
+            logging.info(f"Skipping {file_path}, all required modes already processed.")
+            return False
+    return True
+
+def process_existing_json_files(config):
+    logging.info("Processing existing JSON files...")
+    json_files = get_existing_json_files(config.output_directory)
+    
+    # Dictionary to store prompts for each mode
+    mode_prompts = {mode: [] for mode in config._get_enabled_modes()}
+    
+    for json_file in json_files:
+        file_path = os.path.join(config.output_directory, json_file)
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            if 'analysis' in data:
+                for mode, analysis in data['analysis'].items():
+                    if mode in mode_prompts:
+                        if 'result' in analysis and isinstance(analysis['result'], str):
+                            mode_prompts[mode].append(analysis['result'])
+                        elif 'result' in analysis and isinstance(analysis['result'], dict) and 'caption' in analysis['result']:
+                            mode_prompts[mode].append(analysis['result']['caption'])
+        except Exception as e:
+            logging.error(f"Error processing {json_file}: {str(e)}")
+    
+    # Write prompts to wildcard txt files
+    for mode, prompts in mode_prompts.items():
+        if prompts:
+            wildcard_file = os.path.join(config.output_directory, f"{mode}_wildcards.txt")
+            with open(wildcard_file, 'w') as f:
+                f.write("\n".join(prompts))
+            logging.info(f"Created wildcard file for {mode}: {wildcard_file}")
+    
+    logging.info("Finished processing existing JSON files")
+
+
+###### FILENAME: llm_analyzer.py ######
+
+import os
+import logging
+import requests
+from typing import Dict, Any, List
+from analyzer import Analyzer
+from api_utils import retry_with_backoff, log_api_conversation
+from image_utils import encode_image_to_base64
+
+class LLMAnalyzer(Analyzer):
+    def __init__(self, config):
+        super().__init__(config)
+        self.logger = logging.getLogger('LLM_API')
+
+    def _get_enabled_modes(self):
+        return self.config.selected_prompts
+
+    @retry_with_backoff(max_retries=3, backoff_factor=2)
+    def send_llm_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.config.get_openai_api_key()}"
+        }
+        
+        try:
+            response = requests.post(
+                self.config.llm_api_base_url,
+                headers=headers,
+                json=data,
+                timeout=self.config.timeout
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            
+            log_api_conversation(self.logger, {"request": data, "response": response_data})
+            
+            return response_data
+        except requests.RequestException as e:
+            self.logger.error(f"Error in LLM API request: {str(e)}")
+            self.logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
+            raise
+
+    def analyze_image(self, image_path: str) -> Dict[str, Any]:
+        """
+        Analyze an image using the LLM API.
+
+        Args:
+            image_path (str): Path to the image file.
+
+        Returns:
+            Dict[str, Any]: Analysis results for each prompt, or an error dictionary.
+        """
+        try:
+            image_base64 = encode_image_to_base64(image_path)
+            results = {}
+            for prompt_id in self.config.selected_prompts:
+                data = self._prepare_llm_data(image_base64, prompt_id)
+                results[prompt_id] = self.send_llm_request(data)
+            return results
+        except Exception as e:
+            self.logger.error(f"Error analyzing image {image_path}: {str(e)}")
+            return {'error': str(e)}
+
+    def _prepare_llm_data(self, image_base64: str, prompt_id: str) -> Dict[str, Any]:
+        """
+        Prepare the data payload for the LLM API request.
+
+        Args:
+            image_base64 (str): Base64 encoded image data.
+            prompt_id (str): ID of the prompt to use.
+
+        Returns:
+            Dict[str, Any]: Prepared data payload for the API request.
+        """
+        prompt_options = self.config.get_prompt_options(prompt_id)
+        return {
+            "model": self.config.llm_model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_options['PROMPT_TEXT']},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                    ]
+                }
+            ],
+            "temperature": prompt_options['TEMPERATURE'],
+            "max_tokens": prompt_options['MAX_TOKENS'],
+            "top_p": self.config.top_p,
+            "frequency_penalty": self.config.frequency_penalty,
+            "presence_penalty": self.config.presence_penalty
+        }
+
+    def process_images(self):
+        """
+        Process all images in the specified directory.
+        """
+        existing_files = json_utils.get_existing_json_files(self.config.output_directory)
+        for image_path in self.get_image_files():
+            if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__):
+                result = self.analyze_image(image_path)
+                self.save_result(image_path, result)
+
+
+
+
+###### FILENAME: logging_setup.py ######
+
+import os
+import logging
+
+def setup_logging(config):
+    """
+    Setup logging configurations based on the configuration values.
+
+    Args:
+        config: Configuration object containing logging settings.
+
+    This function sets up file and console logging, as well as specific loggers for API communication, CLIP API, and LLM API.
+    """
+    logging.getLogger().handlers.clear()
+
+    log_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%d/%m/%y %H:%M')
+    console_log_format = logging.Formatter('%(message)s')
+
+    if config.log_to_file:
+        log_file_path = os.path.join(config.output_directory, config.log_file)
+        os.makedirs(config.output_directory, exist_ok=True)
+        file_handler = logging.FileHandler(log_file_path, mode=config.log_mode)
+        file_handler.setFormatter(log_format)
+        file_handler.setLevel(logging.DEBUG)
+        logging.getLogger().addHandler(file_handler)
+
+    if config.log_to_console:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(console_log_format)
+        console_handler.setLevel(logging.INFO)
+        console_handler.setStream(open(1, 'w', encoding='utf-8', closefd=False))
+        logging.getLogger().addHandler(console_handler)
+
+    def setup_api_logger(name, log_file):
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.DEBUG)
+        handler = logging.FileHandler(os.path.join(config.output_directory, log_file), mode='a', encoding='utf-8')
+        handler.setFormatter(log_format)
+        logger.addHandler(handler)
+
+    # Set up API logging if enabled
+    if config.log_api_communication:
+        setup_api_logger('API', 'api_communication.log')
+
+    # Setup CLIP API logger
+    setup_api_logger('CLIP_API', 'api_clip.log')
+
+    # Setup LLM API logger
+    setup_api_logger('LLM_API', 'api_llm.log')
+
+    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger('PIL').setLevel(logging.WARNING)
+
+
+
+###### FILENAME: TEST.py ######
+
+import requests
+
+def test_api():
+    url = "http://127.0.0.1:7860/sdapi/v1/sd-models"
+    try:
+        response = requests.get(url, timeout=10)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text[:200]}...")  # Print first 200 characters of response
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    test_api()
+
+
+###### FILENAME: utils.py ######
+
+import base64
+import hashlib
+import requests
+import os
+import logging
+from functools import wraps
+from PIL import Image
+import io
+from typing import Optional, Dict, Any, Callable
+
+def safe_api_call(func: Callable) -> Callable:
+    """
+    Decorator to safely handle API calls and log errors.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except requests.RequestException as e:
+            logging.error(f"API request failed: {str(e)}")
+            return {"error": str(e)}
+        except Exception as e:
+            logging.exception(f"Unexpected error in API call: {str(e)}")
+            return {"error": "An unexpected error occurred"}
+    return wrapper
+
+def validate_directory(directory: str) -> None:
+    """
+    Validate if a directory exists and is accessible.
+    """
+    if not os.path.isdir(directory):
+        raise ValueError(f"The specified path is not a valid directory: {directory}")
+    if not os.access(directory, os.R_OK):
+        raise PermissionError(f"You don't have read permissions for the directory: {directory}")
+
+

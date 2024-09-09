@@ -84,6 +84,11 @@ class Config:
         self.enable_classic = os.getenv('ENABLE_CLASSIC', 'True').lower() == 'true'
         self.enable_negative = os.getenv('ENABLE_NEGATIVE', 'True').lower() == 'true'
 
+        # Additional settings
+        self.clip_enabled = os.getenv('CLIP_ENABLED', 'true').lower() == 'true'
+        self.llm_enabled = os.getenv('LLM_ENABLED', 'false').lower() == 'true'
+        self.process_json_to_txt = os.getenv('PROCESS_JSON_TO_TXT', 'true').lower() == 'true'
+
     def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:
         llms = {}
         for i in range(1, 5):  # Assuming a maximum of 4 LLM configurations

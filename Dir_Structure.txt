@@ -5,12 +5,9 @@
     analyzer.py
     api_utils.py
     Before Refactor (OLD CODE).zip
-    CLIP_AnalysisV1.exe
     clip_analyzer.py
     CodeSheetConfig.ini
     Code_From_CWD.txt
-    COMPLETE_CODE.TXT
-    config.ini
     config.py
     Dir_Structure.txt
     image_utils.py
@@ -54,18 +51,29 @@
                     origin/
                         main
         objects/
+            00/
+                d1f703ed65a512edaa66502a788801006f11d4
             01/
                 363af75eef02ef1dfe65d39d7dc2927ec113b8
             04/
                 c9e599e36b7f2ced28a31af4a36b88b9b1bff3
+            05/
+                858c7d0808f3d64570a77f8aca34823fe02421
             06/
                 f0cfda7d8b1490d0602d0a251ba23ddd083e1a
             09/
                 b55fca364bc89b6bda729320fe45e2e4a61f5e
             0a/
                 7ac1a4e73c95918a4f207740529fad15bd6f79
+            10/
+                5dbceb4f9ea2e2cc11e2d0bd06cea2954b4f0e
+            11/
+                0ca06e42e4d77e52122b762f20c3b5c74847c8
+            12/
+                2d2a82ce9f57349263c2f1d912401b34afbb6f
             14/
                 143012ca8153a65b874692a7593376d731ea99
+                a0be5e43b999d23e0afc2b63a48509e5c03698
             17/
                 1c35e99f5fabe2d12bf39568f56ef5e4bda197
             19/
@@ -74,34 +82,55 @@
                 62411753d4eb1b19712bffd299a390c08121e4
             1b/
                 46ca506b3812182d9e11e97555226ee8c3d608
+                57956dbad23f674846e8b4fb07e6c65dafe321
+                78c71243e361a5122527e13e7731f566781ce5
             20/
                 8fdd5f53a04175ce4eeca994ff0a0373654475
             21/
                 8087db7dc42d4b59095e693f098aa95afca11e
+            23/
+                12dfd9e73360e76dafa950adf8b411338fe109
             28/
                 1d703ca8a5e6418ab67f938ae8057f971bf80d
             2a/
                 cc6e4ed4d6f4d7f288927a6ccdd401279e7772
             2c/
+                edc9273b09e8e813e7d478cfcbd1a8ac965a9c
                 fd812683bb4fdf6001036cd2e00a094d8ecbce
             2e/
                 a313fbd02d944d30b438b31f80bc4e1dc2db80
                 b037b49e9a5830d449588525ba62f54a8d4372
                 fe36e980b21d7aa98fb5a27d9d53893a7da829
             2f/
+                0f77ac982253b588dc76aafc91f519fdb729d3
                 85059977ee9d5233b15cb94ea0c4a29816e365
+            32/
+                62d8691b43dbf277aed243f0cd778340dc29ca
             33/
+                29cc6a54226af9ec4b353625d22853bcd36ba2
                 5a859abbddcf85ddcc458b7f3b7db482838cf4
             3a/
                 0f13e0500d93ae06abecdf94050e2d6af326b4
+            3b/
+                104d6b2a1f8eb2df76cae16e0e0d2091e63a12
+            3c/
+                da5ea0c5fc4b06b99414f0faeb6df98c530c96
             3f/
                 2c76c4b88c79d6df4de57c222b671bc4acdd34
+            41/
+                384258cd3593f174e6af4c3323b3b0b6b501b7
+                f1921a29240ed1564acec36df3cf39716e2476
+            42/
+                ddc18de1559f43c55209177e90e32348e9eac4
             43/
                 1a30a922f1ef2c666f42e8fe7b9ca3504cb1f3
             44/
+                27e5315e9b6138c2aabe66b2b7ee161b977c8b
                 ae09b40013728d0071e07ed89b660dd14cbd0c
             46/
                 accc6aed2be2b2c358fbfd3d9846a45e42e15b
+            48/
+                5442c29d4a13e963f0e1e2e9482bb5af519d3e
             4a/
                 9a2d86738ed2a39105a3788850ef385aa640a7
                 ed745baa7e38a63bb7302b5f640855cde8e679
@@ -109,6 +138,7 @@
                 14f6ceaf1225250abff5fdb7aea8d89e2ecaf9
             4c/
                 05e6aa8483cd23c67c2397bf8a59eb4809ec95
+                cfe63fe69ceca170be867ad14d31f736231797
             4e/
                 74bcde14be10fed65ed87d21cc920519e19edc
                 86f0211bbc4e2e5e6a9f6afb2c49fef903d894
@@ -128,23 +158,41 @@
                 f880e2a49b1647a160ee5e8819d914567abf60
             57/
                 904a1fc9edeb43977fd1bb07bdd607f3441c93
+            5a/
+                78e63225f64f6875a303048540a3ef790e2d34
+                ac8448b1fa20361f792198006ca2a0212a2f25
+            5b/
+                ab203d7fd24bb58540da9e8c610f7f54003200
+            5f/
+                adfa6d90e9bc9741cdd40755773d957a245095
             61/
                 5bb3be1143988082690293e03c5b36e6747a58
             65/
                 716bf88866d42cb1f5cef4c514887d19445afb
+            67/
+                b5577a351307a2e9b975c5734b135437e9db54
             69/
                 c8d00bcf98864c3c91e4a3296ec0d6b386b0a9
+                dc7b841248c3c73ca0fc890d9de37e1a44cdaa
             6b/
                 769b87c40351060454e1b84a9daa5cdb524aad
                 c36623b07e74449ac34659003c661d6a4dfb1a
             6d/
                 18c9c2c08f8cbd79e8c352d0e2973a22427679
                 45e7981c7d25399e5a276ae2a3d72c369ff9a7
+            70/
+                3d65a3bb61c4f017136bd9a9bac25bba05dba9
+            71/
+                62c335a318aed858d7779f04a01790f964921b
             72/
                 70cc991c88a7347b64e3ec42a84a9734ad6259
                 e4833b738a5572dbedad149277f07720e5a50e
             73/
                 15aab94c64699b12a627f26dacb02f8c9c0d78
+            75/
+                51de04ed3eba2c8544e06b4b0d38fce0b9674e
+            78/
+                a222d0efa3298d595a599855100f15a2d6db43
             7b/
                 50f2ae5e7f7211dc1f6949e6312f11512989aa
             7d/
@@ -152,30 +200,52 @@
             7e/
                 55972ad34b1dd3bdbc8cf86d0843a477693bb4
                 8c35f7895bbf25ce2ee4261ec452edbb208f03
+            80/
+                ce59828d7a25f49d11904781121bd47517b323
             81/
                 34429f5efbc0ed84cbf64affa2cf35a34bdd25
             83/
                 3543101dbaae482f79d04f022be1faeca1a3a3
+            84/
+                078c4469f2b1670f2e6a6a6ad2fd292484a161
             85/
                 33268ec2390c8eeae927d4dabc425f81aa35c6
                 f7b1098fbd59ed03a3881be001556d46fc845e
+            87/
+                60912767c664e8f900950f3c2d331a6476adbb
+            8a/
+                428ed09dbdd3da9e3e27f1f1cd091d31c405cd
+            8b/
+                a4bd4f7da2fbf6cb2a4e0d0f41f9125888e15a
             8e/
                 51200d0afc7bb0a5ef144342941835a007ea23
             90/
                 c5250571b418089881d0b370cb55a907b017f4
                 e84a4dffe271af2d9148f99d0418dedc9af356
+            91/
+                935678916e0f61138543914e188a355a904266
+            92/
+                cf921f497e678e14658c4c7de4a81e28df60e6
             96/
+                3119b18d3e674dc39dd50cd947766f8804175a
                 95b74168640e69e1d274691349cd936f627984
             97/
                 149e0b7f0469fbc9779b9cce95d01cf7a5936d
+                9688056d0242ac45154065bdab70483d1d7099
             98/
                 1b97272287ef06f7cbd808f559a9b39add68ad
             9a/
                 c7c4daf231acb6017e5665dc60f32218cd2851
+            9b/
+                6cec43bcc4c94c51d1e955baf6a3dd44378bd0
             9c/
                 db5cf19b5cf482f2d42c36b834006ef1c2958d
             9d/
                 746a318e38dac971deb5009d8512325d1da827
+            a0/
+                3fa8673995438b9224ef5b6304da6d775a8adf
+            a1/
+                8178521adb7ecce93bbb082ea4f395d65b3a9d
             a3/
                 027d680fb49487f69498a9c66d1bb9efdb0237
             a4/
@@ -186,9 +256,12 @@
                 db5c341cae337b13d55a0c0bb12d0e8efb1d46
             aa/
                 658af92755e48a2fbdb812f4190715a2a77cf0
+            ac/
+                ec98edd4b0631ae63d7edb6f8734aaa39f563e
             ad/
                 67d44dc5247004866e1d24e8f9b08e4416dbbc
                 b7e5d4e5c042d57d92efc7af0bb20a4fc96400
+                f90431bdf5e7d1e30777331c7cc97886889172
             ae/
                 ab11aae483224397c149b7475b70d138065749
                 ba0cf0a3eec7eea9ab7772ffe930d2ca397510
@@ -196,6 +269,9 @@
                 34c0b5a9696a6c974eb00da64c9180a776be28
             b0/
                 370f431754ff6a2edc5740791cd1e57fce1f96
+            b1/
+                106780ffbbf9555e07f3c2897fd5cf666b5184
+                23e9eafb63e1e877662a6901e188748f1b4741
             b2/
                 2d20743c0b25f7566f05852a7e9d637f645f7f
                 5719bebf12cbe95293eb2eb6bca6f931a2fdec
@@ -206,21 +282,41 @@
                 fc0b239360654a3a8648c9ccde04146861d5e0
             b5/
                 8088ca3135ea3e2f7d4b02ee2265545c46b989
+            b8/
+                4c0c4337f120d22493446a26fd784f6b850d7d
+                ad5967c8bdec65edc17f0b58ec8ac27f3262d3
             bb/
                 542e24557ff8f99a31532d7d3e8489886093d0
             bc/
                 fa9923e522703fea3e83c4483b1f345ae6dfab
+            bd/
+                f97c1eae29597d19e85db9e9e8a77a02fc45fe
+            be/
+                683c86f5317a1ee8214a8e95e23f852a242cf6
+            c1/
+                3ed53a153e9d2023db56af9fe8d12b9a717d89
+                e0435a7842299b1234dfed5764ab273502b3b9
             c2/
                 4eaeaff48e0ebdc13ffbca84dd7e132fedc7d5
+                f9d504ac572b3d45b96b031e585bf14991da22
             c5/
                 aab2196d73c5947a78a3747f760c55c4b818cb
             c6/
                 a4695b849273244563318679a53bf779a2d02b
                 b5f3dceaec9e009841aedca32685ee0b8e5f85
+            c8/
+                7cd4553b546b5196a662fcc0f3bf80d8cf907f
             c9/
                 48b53fa029eb204d6f2970e3bddadf680ae8f8
             ca/
+                26d08467178daef794f2ba1f2b5bad6e003db0
                 4bbc13a7698526ed65bac1e5f89a00d5c0ed27
+            cc/
+                5a3e94aab3fe6c863db25169cdce6911ea166e
+            cf/
+                9f31dfd6de924a0bfe4616b9eeba53b8abd9ae
+            d3/
+                fba730d874eff953bdc1e742c2d8fc1b46a3e1
             d4/
                 8ecf06614c250592352cf7a48f84ae2aa11b91
             d6/
@@ -228,8 +324,13 @@
                 f9ac1143e5a83fb9098f1c9d9962b4a4ff58a3
             dc/
                 cdfff6a508dced40da8f154dc86d45b09d1ba9
+                e8c2758e73889730abc761bb36ce1e349ebcb6
+            de/
+                06f27cf0925950ed2c0d31e3f75d17aaf29a6e
             df/
                 ff068b1634dd3ab77befb0ab3bc80f1ac44386
+            e4/
+                a07393b7876f6bfd0a4566551f1be18f61f5cd
             e6/
                 ac88c99108d0a3c782c62f4ca1782ccdf90e44
                 f53c5789c536767397f11de18cb4135fe9712c
@@ -237,6 +338,8 @@
                 149f6a5e0642d4a0feb1d2b19e240e898bac91
             e9/
                 c598f088daf091434a18a9d40b8d850a17a979
+            ea/
+                26810b53e5cc2f06b7ba0ed4e00090f669748a
             eb/
                 2519db0f8902504097140f8158ce293c2e9110
             ec/
@@ -245,6 +348,10 @@
             ed/
                 622d6f6c5b5c3cbd39a7fbbf9c92d0e9eaad27
                 7a416949d6e9e2210f9b6b0ce80567b88ebdf1
+            ee/
+                87a46978f18fdb25851e35f51c6b0a81e82827
+            ef/
+                6bce238e104eb332cf32412035c0d075aba6a0
             f0/
                 806596afc054a21f4d41303b3be69969c54dbf
             f2/
@@ -252,6 +359,9 @@
             f3/
                 03345aab6ab56c019888d5fe3589440af8bbaf
             f7/
+                0003326dacac408227f6f763c2464a122d61c3
+                b494fbdf6fdfd3a858c31774d5a950ac88128a
+                c9ff214039b361b36b444292bd03950750fcb9
                 f58c77405e25b3061c8ed0bcccff1c96eb4847
             f8/
                 eaa8a3848d53bf6b2337c92aafc684912cb49d
@@ -270,23 +380,21 @@
                     main
             tags/
     Images/
-        1/
-            RANDOS (30).png
-            json/
-                1_RANDOS (30)_clip_analysis.json
         2/
             FarSide (26).jpg
             RANDOS (20).png
-            json/
-                2_FarSide (26)_clip_analysis.json
-                2_RANDOS (20)_clip_analysis.json
-        test/
-            FarSide (81).jpg
-            sample.jpg
-            json/
-                test_FarSide (81)_clip_analysis.json
-                test_sample_clip_analysis.json
+        Group/
+            Group (1).png
+            Group (2).png
+            Group (3).png
+            Group (4).png
+            Group (5).png
+            Group (6).png
+            Group (7).png
     Output/
+        api_clip.log
+        api_communication.log
+        api_llm.log
         Log.log
         1/
             1_best_Prompts.txt
@@ -301,6 +409,21 @@
             2_fast_Prompts.txt
             2_negative_Prompts.txt
         CLIP_analysis/
+            1_best_Prompts.txt
+            1_caption_Prompts.txt
+            1_classic_Prompts.txt
+            1_fast_Prompts.txt
+            1_negative_Prompts.txt
+            2_best_Prompts.txt
+            2_caption_Prompts.txt
+            2_classic_Prompts.txt
+            2_fast_Prompts.txt
+            2_negative_Prompts.txt
+            test_best_Prompts.txt
+            test_caption_Prompts.txt
+            test_classic_Prompts.txt
+            test_fast_Prompts.txt
+            test_negative_Prompts.txt
         test/
             test_best_Prompts.txt
             test_caption_Prompts.txt

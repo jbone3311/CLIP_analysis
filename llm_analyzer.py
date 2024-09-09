@@ -1,50 +1,29 @@
 import os
 import logging
 import requests
-from typing import Dict, Any
-from dotenv import load_dotenv
+from typing import Dict, Any, List
 from analyzer import Analyzer
+from api_utils import retry_with_backoff, log_api_conversation
 from image_utils import encode_image_to_base64
-from api_utils import log_api_conversation, retry_with_backoff
 import json_utils
 
-load_dotenv()
-
 class LLMAnalyzer(Analyzer):
-    """
-    LLMAnalyzer class for analyzing images using a Language Model API.
-    Inherits from the Analyzer base class.
-    """
-
     def __init__(self, config):
-        """
-        Initialize the LLMAnalyzer.
-
-        Args:
-            config: Configuration object containing necessary settings.
-        """
-        super().__init__(config.image_directory)
-        self.config = config
+        super().__init__(config)
         self.logger = logging.getLogger('LLM_API')
+
+    def _get_enabled_modes(self):
+        return self.config.selected_prompts
 
     @retry_with_backoff(max_retries=3, backoff_factor=2)
     def send_llm_request(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Send a request to the LLM API.
-
-        Args:
-            data (Dict[str, Any]): The data payload for the API request.
-
-        Returns:
-            Dict[str, Any]: The API response data.
-
-        Raises:
-            requests.RequestException: If the API request fails.
-        """
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.config.get_openai_api_key()}"
         }
+        
+        # Log the request payload (be careful not to log sensitive information)
+        logging.info(f"Sending request to OpenAI API with payload: {json.dumps(data, indent=2)}")
         
         try:
             response = requests.post(
@@ -56,7 +35,6 @@ class LLMAnalyzer(Analyzer):
             response.raise_for_status()
             response_data = response.json()
             
-            # Log both request and response
             log_api_conversation(self.logger, {"request": data, "response": response_data})
             
             return response_data
@@ -65,7 +43,7 @@ class LLMAnalyzer(Analyzer):
             self.logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
             raise
 
-    def analyze_image(self, image_path: str) -> Dict[str, Any]:
+    def analyze_image(self, image_path: str, modes: List[str]) -> Dict[str, Any]:
         """
         Analyze an image using the LLM API.
 
@@ -78,13 +56,19 @@ class LLMAnalyzer(Analyzer):
         try:
             image_base64 = encode_image_to_base64(image_path)
             results = {}
-            for prompt_id in self.config.selected_prompts:
+            for prompt_id in modes:
                 data = self._prepare_llm_data(image_base64, prompt_id)
                 results[prompt_id] = self.send_llm_request(data)
-            return results
+            return {
+                'file_info': self._get_file_info(image_path),
+                'analysis': results
+            }
         except Exception as e:
             self.logger.error(f"Error analyzing image {image_path}: {str(e)}")
-            return {'error': str(e)}
+            return {
+                'file_info': self._get_file_info(image_path),
+                'analysis': {'error': str(e)}
+            }
 
     def _prepare_llm_data(self, image_base64: str, prompt_id: str) -> Dict[str, Any]:
         """
@@ -115,14 +99,4 @@ class LLMAnalyzer(Analyzer):
             "frequency_penalty": self.config.frequency_penalty,
             "presence_penalty": self.config.presence_penalty
         }
-
-    def process_images(self):
-        """
-        Process all images in the specified directory.
-        """
-        existing_files = json_utils.get_existing_json_files(self.config.output_directory)
-        for image_path in self.get_image_files():
-            if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__):
-                result = self.analyze_image(image_path)
-                self.save_result(image_path, result)
 
