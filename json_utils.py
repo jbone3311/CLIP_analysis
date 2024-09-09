@@ -2,14 +2,15 @@ import os
 import json
 import logging
 import time
+from typing import Dict, Any, List, Set
 
-def save_json(file_path, data):
+def save_json(file_path: str, data: Dict[str, Any]) -> None:
     """
     Save data to a JSON file.
 
     Args:
-        file_path: Path to the JSON file.
-        data: Data to be saved.
+        file_path (str): Path to the JSON file.
+        data (Dict[str, Any]): Data to be saved.
     """
     try:
         with open(file_path, 'w', encoding='utf-8') as json_file:
@@ -18,19 +19,19 @@ def save_json(file_path, data):
     except IOError as e:
         logging.error(f"Failed to create or write to file: {e}, Path attempted: {file_path}")
 
-def get_existing_json_files(directory):
+def get_existing_json_files(directory: str) -> List[str]:
     """
     Get the list of existing JSON files in the given directory.
 
     Args:
-        directory: Directory to search for JSON files.
+        directory (str): Directory to search for JSON files.
 
     Returns:
-        list: List of JSON filenames found.
+        List[str]: List of JSON filenames found.
     """
     json_files = []
     for root, _, files in os.walk(directory):
-        json_files.extend([file for file in files if file.lower().endswith('_clip_analysis.json')])
+        json_files.extend([file for file in files if file.lower().endswith('.json')])
     return json_files
 
 def process_existing_json_files(config):
@@ -91,3 +92,34 @@ def process_existing_json_files(config):
                                 logging.info(f"{time.strftime('%d/%m/%y %H:%M')} {list_filename}")
                             except Exception as e:
                                 logging.error(f"Failed to write to file {list_path}: {e}")
+
+def is_valid_llm_json(json_data: Dict[str, Any]) -> bool:
+    """
+    Check if the LLM JSON data is valid.
+
+    Args:
+        json_data (Dict[str, Any]): The JSON data to check.
+
+    Returns:
+        bool: True if the data is valid, False otherwise.
+    """
+    required_keys = ['model', 'messages', 'temperature', 'max_tokens']
+    return all(key in json_data for key in required_keys)
+
+def should_process_file(file_path: str, existing_files: Set[str], analyzer_name: str) -> bool:
+    """
+    Determine if a file should be processed based on existing JSON files.
+
+    Args:
+        file_path (str): Path to the image file being considered for processing.
+        existing_files (Set[str]): Set of existing JSON filenames in the directory.
+        analyzer_name (str): Name of the analyzer class.
+
+    Returns:
+        bool: True if the file should be processed, False otherwise.
+    """
+    json_filename = f"{os.path.splitext(os.path.basename(file_path))[0]}_{analyzer_name}.json"
+    if json_filename in existing_files:
+        logging.info(f"Skipping {file_path}, JSON already exists.")
+        return False
+    return True

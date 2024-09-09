@@ -1,63 +1,50 @@
 import os
 from dotenv import load_dotenv
+from typing import Dict, Any
+from json_utils import process_existing_json_files
 
 load_dotenv()
 
-def mask_api_key(api_key):
-    """Mask the API key for secure logging."""
-    if len(api_key) < 6:
-        return "*" * len(api_key)
-    return api_key[:3] + "*" * (len(api_key) - 6) + api_key[-3:]
-
 class Config:
     """
-    Configuration handler to load and manage application settings.
+    Configuration class for managing application settings.
+    Loads settings from environment variables with default values.
     """
 
     def __init__(self):
-        self.load_config()
-
-    def load_config(self):
-        """
-        Load configuration from environment variables.
-        """
         # API Keys
         self.serper_api_key = os.getenv('SERPER_API_KEY')
-        self.openai_api_key = self.get_openai_api_key()
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
         self.google_api_key = os.getenv('GOOGLE_API_KEY')
         self.google_cse_id = os.getenv('GOOGLE_CSE_ID')
         self.agentops_api_key = os.getenv('AGENTOPS_API_KEY')
 
-        # Local LLM Settings
-        self.local_llm_model_path = os.getenv('LOCAL_LLM_MODEL_PATH')
-        self.openai_api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        self.openai_model_name = os.getenv('OPENAI_MODEL_NAME', 'gpt-3.5-turbo')
-
         # API Configuration
-        self.api_base_url = os.getenv('API_BASE_URL', 'http://localhost:5000')
-        self.timeout = int(os.getenv('TIMEOUT', '40'))
+        self.api_base_url = os.getenv('API_BASE_URL', 'http://127.0.0.1:7860')
+        self.timeout = int(os.getenv('TIMEOUT', '30'))
 
         # Directory Settings
         self.image_directory = os.getenv('IMAGE_DIRECTORY', 'Images')
         self.output_directory = os.getenv('OUTPUT_DIRECTORY', 'Output')
 
         # Logging Configuration
-        self.logging_level = os.getenv('LOGGING_LEVEL', 'INFO')
+        self.logging_level = os.getenv('LOGGING_LEVEL', 'DEBUG')
         self.logging_format = os.getenv('LOGGING_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.log_to_console = os.getenv('LOG_TO_CONSOLE', 'True').lower() == 'true'
         self.log_to_file = os.getenv('LOG_TO_FILE', 'True').lower() == 'true'
-        self.log_file = os.getenv('LOG_FILE', 'image_analysis.log')
-        self.log_mode = os.getenv('LOG_MODE', 'a')
-        self.log_api_communication = os.getenv('LOG_API_COMMUNICATION', 'False').lower() == 'true'
+        self.log_file = os.getenv('LOG_FILE', 'Log.log')
+        self.log_mode = 'w'  # Always overwrite log file
+        self.log_api_communication = os.getenv('LOG_API_COMMUNICATION', 'True').lower() == 'true'
 
         # Model Settings
-        self.model = os.getenv('MODEL', 'ViT-g-14/laion2B-s34B-b88K')
+        self.clip_model_name = os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai')
+        self.clip_mode = os.getenv('CLIP_MODE', 'fast')
         self.caption_types = os.getenv('CAPTION_TYPES', 'caption,best,fast,classic,negative').split(',')
 
         # LLM Settings
         self.llm_api_base_url = os.getenv('LLM_API_BASE_URL', 'https://api.openai.com/v1/chat/completions')
-        self.llm_model = os.getenv('LLM_MODEL', 'gpt-3.5-turbo')
-        self.llm_system_content = os.getenv('LLM_SYSTEM_CONTENT', 'You are a helpful assistant.')
+        self.llm_model = os.getenv('LLM_MODEL', 'gpt-4')
+        self.llm_system_content = os.getenv('LLM_SYSTEM_CONTENT', 'Your default system content here')
 
         # File Handling Settings
         self.create_individual_files = os.getenv('CREATE_INDIVIDUAL_FILES', 'True').lower() == 'true'
@@ -71,60 +58,62 @@ class Config:
         self.image_file_extensions = os.getenv('IMAGE_FILE_EXTENSIONS', '.png,.jpg,.jpeg').split(',')
 
         # LLM Configurations
-        self.llms = {}
-        for i in range(1, 5):
-            enabled = os.getenv(f'LLM_{i}_ENABLED', 'False').lower() == 'true'
-            if enabled:
-                self.llms[f'LLM_{i}'] = {
-                    'enabled': enabled,
-                    'api_url': os.getenv(f'LLM_{i}_API_URL', ''),
-                    'api_key': os.getenv(f'LLM_{i}_API_KEY', '')
-                }
+        self.llms = self._load_llm_configs()
 
-        # Selected Prompts
-        self.selected_prompts = os.getenv('SELECTED_PROMPTS', 'default').split(',')
+        # Analysis Control
+        self.enable_clip_analysis = os.getenv('ENABLE_CLIP_ANALYSIS', 'True').lower() == 'true'
+        self.enable_llm_analysis = os.getenv('ENABLE_LLM_ANALYSIS', 'True').lower() == 'true'
+        self.enable_json_processing = os.getenv('ENABLE_JSON_PROCESSING', 'True').lower() == 'true'
 
-        # LLM-specific configuration options
+        # Retry Configuration
+        self.retry_limit = int(os.getenv('RETRY_LIMIT', '5'))
+        self.sleep_interval = int(os.getenv('SLEEP_INTERVAL', '5'))
+
+        # LLM Parameters
+        self.temperature = float(os.getenv('TEMPERATURE', '0.7'))
+        self.max_tokens = int(os.getenv('MAX_TOKENS', '300'))
         self.top_p = float(os.getenv('TOP_P', '1.0'))
         self.frequency_penalty = float(os.getenv('FREQUENCY_PENALTY', '0.0'))
         self.presence_penalty = float(os.getenv('PRESENCE_PENALTY', '0.0'))
 
-    def get_openai_api_key(self):
-        """
-        Get the OpenAI API key from the environment variable.
-        """
+        # Selected Prompts
+        self.selected_prompts = [p for p in os.getenv('SELECTED_PROMPTS', '').split(',') if p]
+
+    def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:
+        llms = {}
+        for i in range(1, 5):  # Assuming a maximum of 4 LLM configurations
+            enabled = os.getenv(f'LLM_{i}_ENABLED', 'False').lower() == 'true'
+            if enabled:
+                llms[f'LLM_{i}'] = {
+                    'api_url': os.getenv(f'LLM_{i}_API_URL'),
+                    'api_key': os.getenv(f'LLM_{i}_API_KEY'),
+                }
+        return llms
+
+    def get_openai_api_key(self) -> str:
         api_key = os.getenv('OPENAI_API_KEY', '')
         if not api_key:
             raise ValueError("OpenAI API Key not found in environment.")
         return api_key
 
-    def get_prompt_options(self, prompt_id):
-        """
-        Get prompt options for a given prompt ID.
-        """
-        # This is a placeholder implementation. You should replace this with your actual prompt options logic.
+    def get_prompt_options(self, prompt_id: str) -> Dict[str, Any]:
         return {
-            'PROMPT_TEXT': f'Default prompt text for {prompt_id}',
-            'TEMPERATURE': 0.7,
-            'MAX_TOKENS': 150
+            'PROMPT_TEXT': os.getenv(f'{prompt_id.upper()}_PROMPT_TEXT', 'Default prompt text'),
+            'TEMPERATURE': float(os.getenv(f'{prompt_id.upper()}_TEMPERATURE', str(self.temperature))),
+            'MAX_TOKENS': int(os.getenv(f'{prompt_id.upper()}_MAX_TOKENS', str(self.max_tokens)))
         }
 
-    def __str__(self):
-        """
-        Return a string representation of the configuration, masking sensitive data.
-        """
+    def __str__(self) -> str:
         return f"""
         Configuration:
+        - API Base URL: {self.api_base_url}
+        - Timeout: {self.timeout}
         - Image Directory: {self.image_directory}
         - Output Directory: {self.output_directory}
-        - API Base URL: {self.api_base_url}
-        - OpenAI API Key: {mask_api_key(self.openai_api_key)}
-        - Timeout: {self.timeout}
-        - Logging Level: {self.logging_level}
-        - Model: {self.model}
-        - Caption Types: {', '.join(self.caption_types)}
+        - CLIP Model: {self.clip_model_name}
+        - CLIP Mode: {self.clip_mode}
         - LLM Model: {self.llm_model}
-        - Create Individual Files: {self.create_individual_files}
-        - Create Master Files: {self.create_master_files}
-        - Image File Extensions: {', '.join(self.image_file_extensions)}
+        - Enable CLIP Analysis: {self.enable_clip_analysis}
+        - Enable LLM Analysis: {self.enable_llm_analysis}
+        - Enable JSON Processing: {self.enable_json_processing}
         """

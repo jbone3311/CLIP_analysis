@@ -4,8 +4,14 @@ import requests
 import os
 import logging
 from functools import wraps
+from PIL import Image
+import io
+from typing import Optional, Dict, Any, Callable
 
-def safe_api_call(func):
+def safe_api_call(func: Callable) -> Callable:
+    """
+    Decorator to safely handle API calls and log errors.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -18,18 +24,19 @@ def safe_api_call(func):
             return {"error": "An unexpected error occurred"}
     return wrapper
 
-def encode_image_to_base64(image_path):
-    try:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
-    except FileNotFoundError:
-        logging.error(f"Image file not found: {image_path}")
-        return None
-    except Exception as e:
-        logging.exception(f"Error encoding image {image_path}: {str(e)}")
-        return None
+def encode_image_to_base64(image_path: str) -> str:
+    """
+    Encode an image file to base64 string.
+    """
+    with Image.open(image_path) as image:
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        return base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-def generate_unique_code(file_path):
+def generate_unique_code(file_path: str) -> Optional[str]:
+    """
+    Generate a unique hash code for a file.
+    """
     try:
         with open(file_path, "rb") as f:
             file_hash = hashlib.blake2b()
@@ -41,10 +48,13 @@ def generate_unique_code(file_path):
         return None
 
 @safe_api_call
-def analyze_image_detailed(image_base64, model, caption_types, api_url, timeout, config):
+def analyze_image_detailed(image_base64: str, model: str, caption_types: list, api_url: str, timeout: int, config: Any) -> Dict[str, Any]:
+    """
+    Send a request to analyze an image in detail.
+    """
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {os.environ.get('OPENAI_API_KEY')}"
+        "Authorization": f"Bearer {config.get_openai_api_key()}"
     }
     payload = {
         "model": model,
@@ -56,30 +66,18 @@ def analyze_image_detailed(image_base64, model, caption_types, api_url, timeout,
     response.raise_for_status()
     return response.json()
 
-def get_existing_json_files(directory):
-    existing_files = set()
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith('.json'):
-                existing_files.add(file)
-    return existing_files
-
-def setup_logging(level=logging.INFO):
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('image_analysis.log')
-        ]
-    )
-
-def validate_directory(directory):
+def validate_directory(directory: str) -> None:
+    """
+    Validate if a directory exists and is accessible.
+    """
     if not os.path.isdir(directory):
         raise ValueError(f"The specified path is not a valid directory: {directory}")
     if not os.access(directory, os.R_OK):
         raise PermissionError(f"You don't have read permissions for the directory: {directory}")
 
-def validate_api_key():
+def validate_api_key() -> None:
+    """
+    Validate if the OPENAI_API_KEY environment variable is set.
+    """
     if 'OPENAI_API_KEY' not in os.environ:
         raise EnvironmentError("OPENAI_API_KEY environment variable is not set")

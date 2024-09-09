@@ -3,7 +3,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Tuple
 
 class Analyzer(ABC):
     """
@@ -16,40 +16,46 @@ class Analyzer(ABC):
 
     def __init__(self, directory: str):
         self.directory = directory
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+        self.image_extensions: Tuple[str, ...] = ('.jpg', '.jpeg', '.png')
 
     @abstractmethod
     def analyze_image(self, image_path: str) -> Dict:
-        pass
+        """
+        Analyze a single image and return the results.
 
-    def get_existing_json_files(self) -> Set[str]:
-        existing_files = set()
-        for root, _, files in os.walk(self.directory):
-            for file in files:
-                if file.endswith('.json'):
-                    existing_files.add(file)
-        return existing_files
+        This method should be implemented by subclasses to perform
+        the actual image analysis.
+
+        :param image_path: Path to the image file
+        :return: Dictionary containing the analysis results
+        """
+        pass
 
     def process_directory(self) -> None:
         start_time = time.time()
         existing_files = self.get_existing_json_files()
-        total_images = sum(len(files) for _, _, files in os.walk(self.directory) 
-                           if any(f.lower().endswith(('.png', '.jpg', '.jpeg')) for f in files))
-        processed_images = 0
 
-        for root, _, files in os.walk(self.directory):
-            for file in files:
-                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    image_path = os.path.join(root, file)
-                    if self.should_process_file(file, existing_files):
-                        try:
-                            result = self.analyze_image(image_path)
-                            self.save_result(image_path, result)
-                            processed_images += 1
-                            logging.info(f"Processed {processed_images}/{total_images}: {file}")
-                        except Exception as e:
-                            logging.error(f"Error processing {image_path}: {e}")
+        total_images, processed_images = self._process_images(existing_files)
 
+        self._log_processing_summary(total_images, processed_images, start_time)
+
+    def _process_images(self, existing_files: Set[str]) -> Tuple[int, int]:
+        total_images, processed_images = 0, 0
+
+        for image_path in self.get_image_files():
+            total_images += 1
+            if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__):
+                try:
+                    result = self.analyze_image(image_path)
+                    self.save_result(image_path, result)
+                    processed_images += 1
+                    logging.info(f"Processed {processed_images}/{total_images}: {os.path.basename(image_path)}")
+                except Exception as e:
+                    logging.error(f"Error processing {image_path}: {e}")
+
+        return total_images, processed_images
+
+    def _log_processing_summary(self, total_images: int, processed_images: int, start_time: float) -> None:
         total_time = time.time() - start_time
         logging.info(f"Total processing time: {total_time:.2f} seconds")
         logging.info(f"Processed {processed_images}/{total_images} images")
@@ -61,13 +67,6 @@ class Analyzer(ABC):
             json.dump(result, f, indent=2)
         logging.info(f"Saved results to {json_path}")
 
-    def should_process_file(self, file: str, existing_files: Set[str]) -> bool:
-        json_filename = f"{os.path.splitext(file)[0]}_{self.__class__.__name__}.json"
-        if json_filename in existing_files:
-            logging.info(f"Skipping {file}, JSON already exists.")
-            return False
-        return True
-
     def ensure_output_directory(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
 
@@ -75,6 +74,6 @@ class Analyzer(ABC):
         image_files = []
         for root, _, files in os.walk(self.directory):
             for file in files:
-                if file.lower().endswith(tuple(self.config.image_file_extensions)):
+                if file.lower().endswith(self.image_extensions):
                     image_files.append(os.path.join(root, file))
         return image_files

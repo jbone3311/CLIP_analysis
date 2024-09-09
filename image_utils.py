@@ -1,17 +1,18 @@
 import base64
 import hashlib
 import logging
+from typing import Optional, Tuple
 from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 
-def generate_unique_code(image_path):
+def generate_unique_code(image_path: str) -> Optional[str]:
     """Generate a unique SHA-256 hash for an image file.
 
     Args:
         image_path (str): Path to the image file.
 
     Returns:
-        str: SHA-256 hash of the image, or None if an error occurs.
+        Optional[str]: SHA-256 hash of the image, or None if an error occurs.
     """
     try:
         with Image.open(image_path) as img:
@@ -27,7 +28,7 @@ def generate_unique_code(image_path):
         logging.error("Error generating unique code for image %s: %s", image_path, e)
     return None
 
-def resize_image(image, max_size=(512, 512)):
+def resize_image(image: Image.Image, max_size: Tuple[int, int] = (512, 512)) -> Image.Image:
     """Resize the image to fit within max_size while maintaining aspect ratio.
 
     Args:
@@ -37,26 +38,26 @@ def resize_image(image, max_size=(512, 512)):
     Returns:
         PIL.Image: Resized image.
     """
-    image.thumbnail(max_size, Image.ANTIALIAS)
+    image.thumbnail(max_size, Image.LANCZOS)
     return image
 
-def encode_image_to_base64(image_path):
+def encode_image_to_base64(image_path: str) -> Optional[str]:
     """Encode an image file to a base64 string.
 
     Args:
         image_path (str): Path to the image file.
 
     Returns:
-        str: Base64 encoded string of the image, or None if an error occurs.
+        Optional[str]: Base64 encoded string of the image, or None if an error occurs.
     """
     try:
         with Image.open(image_path) as img:
             img = resize_image(img)  # Resize the image before encoding
-            imgio = BytesIO()
-            img.save(imgio, 'JPEG')
-            imgio.seek(0)
-            data = base64.b64encode(imgio.read())
-            return data.decode('utf8')
+            with BytesIO() as imgio:
+                img.save(imgio, 'JPEG')
+                imgio.seek(0)
+                data = base64.b64encode(imgio.getvalue())
+                return data.decode('utf8')
     except FileNotFoundError as e:
         logging.error("Image file not found: %s - %s", image_path, e)
     except UnidentifiedImageError as e:
@@ -65,14 +66,14 @@ def encode_image_to_base64(image_path):
         logging.error("Error encoding image to base64: %s", e)
     return None
 
-def process_image_for_analysis(image_path):
+def process_image_for_analysis(image_path: str) -> Optional[str]:
     """Process an image for analysis by resizing and converting to JPEG if needed.
 
     Args:
         image_path (str): Path to the image file.
 
     Returns:
-        str: Base64 encoded string of the processed image, or None if an error occurs.
+        Optional[str]: Base64 encoded string of the processed image, or None if an error occurs.
     """
     try:
         with Image.open(image_path) as img:
@@ -82,11 +83,11 @@ def process_image_for_analysis(image_path):
             else:
                 # Resize and convert to JPEG
                 img = resize_image(img)
-                imgio = BytesIO()
-                img.save(imgio, 'JPEG')
-                imgio.seek(0)
-                data = base64.b64encode(imgio.read())
-                return data.decode('utf8')
+                with BytesIO() as imgio:
+                    img.save(imgio, 'JPEG')
+                    imgio.seek(0)
+                    data = base64.b64encode(imgio.getvalue())
+                    return data.decode('utf8')
     except FileNotFoundError as e:
         logging.error("Image file not found: %s - %s", image_path, e)
     except UnidentifiedImageError as e:
