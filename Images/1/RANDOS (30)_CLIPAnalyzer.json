@@ -1,3 +1,46 @@
 {
-  "prompt": "demi rose, blonde goddess, full body x-force outfit, ear floof, her wardrobe is attractive, boutinela bikini, long wavy blond hair, alien ruins, miss fortune league of legends, dragon girl, dark magician girl from yu-gi-oh, bbwchan, mecha font, pyramids of giza"
+  "file_info": {
+    "filename": "RANDOS (30).png",
+    "unique_hash": "2dc071089468e01edff9d66204d15d32",
+    "date_created": 1719698417.0723464,
+    "date_processed": 1725849498.2223294,
+    "file_size": 1408645
+  },
+  "analysis": {
+    "caption": {
+      "result": {
+        "prompt": "painting of a man holding a red flower in front of his face"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "caption"
+    },
+    "best": {
+      "result": {
+        "prompt": "painting of a man holding a red flower in front of his face, photorealist, bj\u00f8rn skalldrasson, large aquiline nose!!, ffffound, giant daisy flower as a head, by John Keane, clean borders ; photorealistic, painted todd lockwood, doppler effect"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "best"
+    },
+    "fast": {
+      "result": {
+        "prompt": "painting of a man holding a red flower in front of his face, kieth thomsen, photography hyperrealism, hyperrealism photorealism, hyperrealism\u201d, thomas kinade, by John Keane, hyperrealism, hyperrealism photography, colorful hyperrealism, hyperrealism painting, hyperrealism photo, hyperrealistic portrait, martin sharp, hyper - realism, hyper-realism"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "fast"
+    },
+    "classic": {
+      "result": {
+        "prompt": "painting of a man holding a red flower in front of his face, a hyperrealistic painting by John Keane, cgsociety, hyperrealism, kieth thomsen, photography hyperrealism, hyperrealism photorealism"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "classic"
+    },
+    "negative": {
+      "result": {
+        "prompt": "demi rose, blonde goddess, full body x-force outfit, ear floof, her wardrobe is attractive, boutinela bikini, long wavy blond hair, alien ruins, miss fortune league of legends, dragon girl, dark magician girl from yu-gi-oh, bbwchan, mecha font, pyramids of giza"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "negative"
+    }
+  }
 }

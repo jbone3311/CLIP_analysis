@@ -6,27 +6,17 @@ from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 
 def generate_unique_code(image_path: str) -> Optional[str]:
-    """Generate a unique SHA-256 hash for an image file.
-
-    Args:
-        image_path (str): Path to the image file.
-
-    Returns:
-        Optional[str]: SHA-256 hash of the image, or None if an error occurs.
-    """
     try:
-        with Image.open(image_path) as img:
-            with BytesIO() as img_byte_array:
-                img.save(img_byte_array, format=img.format)
-                img_byte_data = img_byte_array.getvalue()
-                return hashlib.sha256(img_byte_data).hexdigest()
-    except FileNotFoundError as e:
-        logging.error("Image file not found: %s - %s", image_path, e)
-    except UnidentifiedImageError as e:
-        logging.error("Cannot identify image file: %s - %s", image_path, e)
-    except Exception as e:
-        logging.error("Error generating unique code for image %s: %s", image_path, e)
-    return None
+        with open(image_path, "rb") as f:
+            file_hash = hashlib.md5()
+            chunk = f.read(8192)
+            while chunk:
+                file_hash.update(chunk)
+                chunk = f.read(8192)
+        return file_hash.hexdigest()
+    except IOError as e:
+        logging.error(f"Error generating unique code for {image_path}: {str(e)}")
+        return None
 
 def resize_image(image: Image.Image, max_size: Tuple[int, int] = (512, 512)) -> Image.Image:
     """Resize the image to fit within max_size while maintaining aspect ratio.

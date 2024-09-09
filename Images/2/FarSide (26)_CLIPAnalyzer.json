@@ -1,3 +1,46 @@
 {
-  "prompt": "wojtek fus, cyberpunk anime girl mech, angewomon from digimon, retrowave colour scheme, 4k hd matte digital painting, octane render ], hd vfx - 9, female lucio, deayami kojima, akihabara, cyberpunk pixel art, tsuaii, cyberpunk 2 0 y. o model girl, close up, ultra detail. digital painting, childish"
+  "file_info": {
+    "filename": "FarSide (26).jpg",
+    "unique_hash": "1b177c68e78d67f3680518d8f94c05c3",
+    "date_created": 1719733477.3627324,
+    "date_processed": 1725849521.1921237,
+    "file_size": 157200
+  },
+  "analysis": {
+    "caption": {
+      "result": {
+        "prompt": "cartoon of a group of people sitting around a fire with a dog"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "caption"
+    },
+    "best": {
+      "result": {
+        "prompt": "cartoon of a group of people sitting around a fire with a dog, desert mesa, gary larson, scans from museum collection, cauldrons, by Norman Hepple, craters, cowboys, aspic, soup, eddie h. hinestroza"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "best"
+    },
+    "fast": {
+      "result": {
+        "prompt": "cartoon of a group of people sitting around a fire with a dog, gary larson, by William Steig, inspired western comic, the cowboy in the weird west, western comic art, herluf bidstrup, folk medicine, ( ( ( grant wood ) ) ), weird west, western comic, giraud!, by Kurt Roesch, giraud"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "fast"
+    },
+    "classic": {
+      "result": {
+        "prompt": "cartoon of a group of people sitting around a fire with a dog, an etching by William Steig, trending on pinterest, american realism, gary larson, inspired western comic, the cowboy in the weird west"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "classic"
+    },
+    "negative": {
+      "result": {
+        "prompt": "wojtek fus, cyberpunk anime girl mech, angewomon from digimon, retrowave colour scheme, 4k hd matte digital painting, octane render ], hd vfx - 9, female lucio, deayami kojima, akihabara, cyberpunk pixel art, tsuaii, cyberpunk 2 0 y. o model girl, close up, ultra detail. digital painting, childish"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "negative"
+    }
+  }
 }

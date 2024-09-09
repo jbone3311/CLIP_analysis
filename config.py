@@ -78,6 +78,13 @@ class Config:
         # Selected Prompts
         self.selected_prompts = [p for p in os.getenv('SELECTED_PROMPTS', '').split(',') if p]
 
+        # New Analysis Modes
+        self.enable_caption = os.getenv('ENABLE_CAPTION', 'True').lower() == 'true'
+        self.enable_best = os.getenv('ENABLE_BEST', 'True').lower() == 'true'
+        self.enable_fast = os.getenv('ENABLE_FAST', 'True').lower() == 'true'
+        self.enable_classic = os.getenv('ENABLE_CLASSIC', 'True').lower() == 'true'
+        self.enable_negative = os.getenv('ENABLE_NEGATIVE', 'True').lower() == 'true'
+
     def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:
         llms = {}
         for i in range(1, 5):  # Assuming a maximum of 4 LLM configurations
@@ -90,10 +97,7 @@ class Config:
         return llms
 
     def get_openai_api_key(self) -> str:
-        api_key = os.getenv('OPENAI_API_KEY', '')
-        if not api_key:
-            raise ValueError("OpenAI API Key not found in environment.")
-        return api_key
+        return self.openai_api_key  # Make sure this attribute is set in the __init__ method
 
     def get_prompt_options(self, prompt_id: str) -> Dict[str, Any]:
         return {
@@ -101,6 +105,15 @@ class Config:
             'TEMPERATURE': float(os.getenv(f'{prompt_id.upper()}_TEMPERATURE', str(self.temperature))),
             'MAX_TOKENS': int(os.getenv(f'{prompt_id.upper()}_MAX_TOKENS', str(self.max_tokens)))
         }
+
+    def _get_enabled_modes(self):
+        return [mode for mode, enabled in {
+            'caption': self.enable_caption,
+            'best': self.enable_best,
+            'fast': self.enable_fast,
+            'classic': self.enable_classic,
+            'negative': self.enable_negative
+        }.items() if enabled]
 
     def __str__(self) -> str:
         return f"""

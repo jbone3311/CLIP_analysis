@@ -1,3 +1,46 @@
 {
-  "prompt": "tuesday weld in a pink bikini, she is dressed as a belly dancer, suze randall, red gold and black outfit, draped in silky purple and gold, princess diana, 35mm film grain, warm colors--seed 1242253951, vf-1s jetfire, barefoot in sandals, lovely dark autumn princess, windy mane"
+  "file_info": {
+    "filename": "RANDOS (20).png",
+    "unique_hash": "453010d374bc35ac709cbdfc03068cc8",
+    "date_created": 1719698417.1153545,
+    "date_processed": 1725849542.9126794,
+    "file_size": 1167572
+  },
+  "analysis": {
+    "caption": {
+      "result": {
+        "prompt": "painting of two bald men with glasses and a green background"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "caption"
+    },
+    "best": {
+      "result": {
+        "prompt": "painting of two bald men with glasses and a green background, japanese pop surrealism, cd cover artwork, by Yang Weizhen, unique heads, two hovering twin nuns, anton semenov, 1 0 0 0 best album covers, portrait of family of three, 2 0 0 7, academy headmaster, stunning character art, orbital, ( ( bit flip | god of ai art ) )"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "best"
+    },
+    "fast": {
+      "result": {
+        "prompt": "painting of two bald men with glasses and a green background, zeen chin and terada katsuya, style of mark ryden, jeffrey smith and rlon wang, ayanamikodon and irakli nadar, naoto hattori, art jiro matsumoto, japanese pop surrealism, mark ryden style, lowbrow pop surrealism"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "fast"
+    },
+    "classic": {
+      "result": {
+        "prompt": "painting of two bald men with glasses and a green background, an ultrafine detailed painting by Ren Xun, cgsociety, neo-dada, zeen chin and terada katsuya, style of mark ryden, jeffrey smith and rlon wang"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "classic"
+    },
+    "negative": {
+      "result": {
+        "prompt": "tuesday weld in a pink bikini, she is dressed as a belly dancer, suze randall, red gold and black outfit, draped in silky purple and gold, princess diana, 35mm film grain, warm colors--seed 1242253951, barefoot in sandals, cliffjumper, african princess"
+      },
+      "model": "ViT-L-14/openai",
+      "mode": "negative"
+    }
+  }
 }
