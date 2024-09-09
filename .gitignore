@@ -91,5 +91,5 @@ api_keys.txt
 credentials.json
 
 # Output directories
-output/
-results/
+Output/
+Images/
