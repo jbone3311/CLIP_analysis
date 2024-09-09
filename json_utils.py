@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import time
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List
 
 def save_json(file_path: str, data: Dict[str, Any]) -> None:
     """
@@ -106,13 +106,13 @@ def is_valid_llm_json(json_data: Dict[str, Any]) -> bool:
     required_keys = ['model', 'messages', 'temperature', 'max_tokens']
     return all(key in json_data for key in required_keys)
 
-def should_process_file(file_path: str, existing_files: Set[str], analyzer_name: str) -> bool:
+def should_process_file(file_path: str, existing_files: List[str], analyzer_name: str) -> bool:
     """
     Determine if a file should be processed based on existing JSON files.
 
     Args:
         file_path (str): Path to the image file being considered for processing.
-        existing_files (Set[str]): Set of existing JSON filenames in the directory.
+        existing_files (List[str]): List of existing JSON filenames in the directory.
         analyzer_name (str): Name of the analyzer class.
 
     Returns:

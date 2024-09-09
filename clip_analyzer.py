@@ -4,8 +4,7 @@ import requests
 from typing import Dict, Any
 from analyzer import Analyzer
 from api_utils import retry_with_backoff, log_api_conversation
-from utils import encode_image_to_base64
-from json_utils import should_process_file
+from image_utils import encode_image_to_base64
 import json_utils
 
 class CLIPAnalyzer(Analyzer):

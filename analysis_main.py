@@ -4,7 +4,7 @@ from config import Config
 from logging_setup import setup_logging
 from clip_analyzer import CLIPAnalyzer
 from llm_analyzer import LLMAnalyzer
-from json_utils import save_json, get_existing_json_files, process_existing_json_files, is_valid_llm_json, should_process_file
+from json_utils import process_existing_json_files
 
 load_dotenv()
 

@@ -4,9 +4,9 @@ import requests
 from typing import Dict, Any
 from dotenv import load_dotenv
 from analyzer import Analyzer
-from utils import encode_image_to_base64
+from image_utils import encode_image_to_base64
 from api_utils import log_api_conversation, retry_with_backoff
-from json_utils import should_process_file, get_existing_json_files
+import json_utils
 
 load_dotenv()
 
@@ -120,9 +120,9 @@ class LLMAnalyzer(Analyzer):
         """
         Process all images in the specified directory.
         """
-        existing_files = get_existing_json_files(self.config.output_directory)
+        existing_files = json_utils.get_existing_json_files(self.config.output_directory)
         for image_path in self.get_image_files():
-            if should_process_file(image_path, existing_files, self.__class__.__name__):
+            if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__):
                 result = self.analyze_image(image_path)
                 self.save_result(image_path, result)
 

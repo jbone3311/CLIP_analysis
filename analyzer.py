@@ -3,7 +3,8 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Set, List, Tuple
+from typing import Dict, List, Tuple
+import json_utils
 
 class Analyzer(ABC):
     """
@@ -39,7 +40,7 @@ class Analyzer(ABC):
 
         self._log_processing_summary(total_images, processed_images, start_time)
 
-    def _process_images(self, existing_files: Set[str]) -> Tuple[int, int]:
+    def _process_images(self, existing_files: List[str]) -> Tuple[int, int]:
         total_images, processed_images = 0, 0
 
         for image_path in self.get_image_files():
