@@ -87,7 +87,7 @@ class Config:
         # Additional settings
         self.clip_enabled = os.getenv('CLIP_ENABLED', 'true').lower() == 'true'
         self.llm_enabled = os.getenv('LLM_ENABLED', 'false').lower() == 'true'
-        self.process_json_to_txt = os.getenv('PROCESS_JSON_TO_TXT', 'true').lower() == 'true'
+        self.process_json_to_txt = os.getenv('PROCESS_JSON_TO_TXT', 'True').lower() == 'true'
 
     def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:
         llms = {}
