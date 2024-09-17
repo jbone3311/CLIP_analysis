@@ -19,24 +19,24 @@ class Config:
         self.agentops_api_key = os.getenv('AGENTOPS_API_KEY')
 
         # API Configuration
-        self.api_base_url = os.getenv('API_BASE_URL', 'http://127.0.0.1:7860')
-        self.timeout = int(os.getenv('TIMEOUT', '30'))
+        self.api_base_url = os.getenv('API_BASE_URL', 'http://localhost:7860')
+        self.timeout = int(os.getenv('TIMEOUT', '60'))  # Increase to 60 seconds or more
 
         # Directory Settings
-        self.image_directory = os.getenv('IMAGE_DIRECTORY', 'Images')
-        self.output_directory = os.getenv('OUTPUT_DIRECTORY', 'Output')
+        self.image_directory = os.getenv('IMAGE_DIRECTORY', 'path_to_images')
+        self.output_directory = os.getenv('OUTPUT_DIRECTORY', 'path_to_output')
 
         # Logging Configuration
-        self.logging_level = os.getenv('LOGGING_LEVEL', 'DEBUG')
+        self.logging_level = os.getenv('LOGGING_LEVEL', 'INFO')
         self.logging_format = os.getenv('LOGGING_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.log_to_console = os.getenv('LOG_TO_CONSOLE', 'True').lower() == 'true'
         self.log_to_file = os.getenv('LOG_TO_FILE', 'True').lower() == 'true'
         self.log_file = os.getenv('LOG_FILE', 'Log.log')
         self.log_mode = 'w'  # Always overwrite log file
-        self.log_api_communication = os.getenv('LOG_API_COMMUNICATION', 'True').lower() == 'true'
+        self.log_api_conversation = os.getenv('LOG_API_CONVERSATION', 'False').lower() == 'true'
 
         # Model Settings
-        self.clip_model_name = os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai')
+        self.clip_model_name = os.getenv('CLIP_MODEL_NAME', 'ViT-L-14')
         self.caption_types = os.getenv('CAPTION_TYPES', 'caption,best,fast,classic,negative').split(',')
 
         # LLM Settings
@@ -59,8 +59,8 @@ class Config:
         self.llms = self._load_llm_configs()
 
         # Analysis Control
-        self.enable_clip_analysis = os.getenv('ENABLE_CLIP_ANALYSIS', 'True').lower() == 'true'
-        self.enable_llm_analysis = os.getenv('ENABLE_LLM_ANALYSIS', 'True').lower() == 'true'
+        self.clip_enabled = os.getenv('ENABLE_CLIP_ANALYSIS', 'True').lower() == 'true'
+        self.llm_enabled = os.getenv('ENABLE_LLM_ANALYSIS', 'False').lower() == 'true'
         self.enable_json_processing = os.getenv('ENABLE_JSON_PROCESSING', 'True').lower() == 'true'
 
         # Retry Configuration
@@ -85,8 +85,6 @@ class Config:
         self.enable_negative = os.getenv('ENABLE_NEGATIVE', 'True').lower() == 'true'
 
         # Additional settings
-        self.clip_enabled = os.getenv('CLIP_ENABLED', 'true').lower() == 'true'
-        self.llm_enabled = os.getenv('LLM_ENABLED', 'false').lower() == 'true'
         self.process_json_to_txt = os.getenv('PROCESS_JSON_TO_TXT', 'True').lower() == 'true'
 
     def _load_llm_configs(self) -> Dict[str, Dict[str, Any]]:

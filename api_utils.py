@@ -6,24 +6,29 @@ from functools import wraps
 from typing import Callable, Dict, Any, Optional
 import requests
 
-def log_api_conversation(logger: logging.Logger, data: Dict[str, Any]):
-    logger.debug("API Conversation:")
-    logger.debug(json.dumps(data, indent=2))
+def log_api_conversation(logger: logging.Logger, data: Dict[str, Any], log_conversation: bool):
+    if log_conversation:
+        logger.debug("API Conversation:")
+        logger.debug(json.dumps(data, indent=2))
 
-def retry_with_backoff(max_retries: int = 3, backoff_factor: int = 2):
-    def decorator(func: Callable) -> Callable:
+def retry_with_backoff(max_retries: int = 5, initial_wait: float = 1, backoff_factor: float = 2):
+    def decorator(func):
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args, **kwargs):
             retries = 0
+            wait_time = initial_wait
             while retries < max_retries:
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:
-                    wait = backoff_factor ** retries
-                    logging.warning(f"Request failed: {e}. Retrying in {wait} seconds...")
-                    time.sleep(wait)
+                except requests.RequestException as e:
+                    if isinstance(e, requests.HTTPError) and e.response.status_code == 500:
+                        logging.warning(f"Server error (500). Retrying in {wait_time:.2f} seconds...")
+                    else:
+                        logging.warning(f"Request failed: {e}. Retrying in {wait_time:.2f} seconds...")
+                    time.sleep(wait_time)
                     retries += 1
-            return func(*args, **kwargs)
+                    wait_time *= backoff_factor
+            raise Exception(f"Failed after {max_retries} retries")
         return wrapper
     return decorator
 
@@ -38,7 +43,7 @@ def send_llm_request(data: Dict[str, Any], api_key: str, api_url: str, timeout: 
         response = requests.post(api_url, json=data, headers=headers, timeout=timeout)
         response.raise_for_status()
         response_data = response.json()
-        log_api_conversation(llm_logger, {"request": data, "response": response_data})
+        log_api_conversation(llm_logger, {"request": data, "response": response_data}, True)
         return response_data
     except requests.RequestException as e:
         llm_logger.error(f"Error in LLM API request: {str(e)}")

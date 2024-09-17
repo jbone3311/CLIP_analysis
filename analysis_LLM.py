@@ -1,124 +1,251 @@
+#!/usr/bin/env python3
 """
-LLMAnalyzer Class
+LLMAnalyzer Standalone Script
 
-This class is responsible for analyzing images using a selected LLM (Language Model) API. 
-It allows for the submission of prompts either directly or by referencing predefined prompts 
-from the environment configuration.
+This script analyzes an image using a selected LLM (Language Model) API.
+It accepts prompts directly or via prompt IDs defined in a LLM_Prompts.json file,
+sends requests to the API, and generates a JSON file with the results.
 
-Parameters:
-    image_path (str): (Required) Path to the image file.
-    --prompt (str): The prompt to be used for analysis. You can specify direct prompts or 
-                    use prompt IDs (e.g., P1, P2) defined in the .env file.
-                    Example: "How many dogs, P1, P2"
-    --model (int): Model number for analysis. Choose from available LLMs (1-5).
-    --api_base_url (str): Base URL of the LLM API. Default is http://localhost:8000.
-    --api_key (str): API key for authentication with the LLM API.
-    --title (str): Title for the LLM request.
+Usage:
+    python analysis_LLM.py <image_path> --prompt <prompt> --model <model_number> [--output <output_file>] [--debug]
 
-Example Usage:
-    python llm_analyzer.py test.png --prompt "Describe the image." --model 1 --api_base_url http://localhost:8000 --api_key YOUR_API_KEY
+Arguments:
+    image_path: Path to the image file to be processed.
+    --prompt: Comma-separated prompts or prompt IDs (e.g., 'Describe the image, P1, P2'). Use 'list' to display all prompts.
+    --model: Model number for analysis (1-N) or 'list' to display all models.
+    --output: Optional output file path for the JSON results.
+    --debug: Enable debug logging.
 
-In the above example, the script will analyze the image located at 'test.png' using the 
-prompt "Describe the image." with the LLM model specified by model number 1.
+Example:
+    python analysis_LLM.py test.png --prompt "P1" --model 1 --output results.json
 
-You can also combine direct prompts with prompt IDs:
-    python llm_analyzer.py test.png --prompt "How many dogs, P1, P2" --model 1 --api_base_url http://localhost:8000 --api_key YOUR_API_KEY
+To list all available models:
+    python analysis_LLM.py --model list
 
-In this case, the LLM will process the direct prompt "How many dogs" along with the prompts 
-defined in the .env file for P1 and P2.
-
+To list all available prompts:
+    python analysis_LLM.py --prompt list
 """
 
 import os
 import logging
 import requests
+import argparse
+import json
+import base64
 from typing import Optional, Dict, Any, List
-from analyzer import Analyzer
-from api_utils import retry_with_backoff, log_api_conversation
-from image_utils import encode_image_to_base64
-import json_utils
+from dotenv import load_dotenv
 
-class LLMAnalyzer(Analyzer):
-    def __init__(self, config):
-        super().__init__(config.image_directory)
-        self.config = config
-        self.logger = logging.getLogger('LLM_API')
+# Load environment variables from .env file
+load_dotenv()
 
-    def get_llm_config(self, model_number: int) -> Optional[Dict[str, str]]:
-        """Retrieve LLM configuration based on the model number."""
-        llm_config = self.config.llm_configs.get(model_number)
-        if not llm_config:
-            self.logger.error(f"Invalid model number: {model_number}")
-            return None
-        return llm_config
+# Define emojis as constants for better manageability
+EMOJI_SUCCESS = "✅"
+EMOJI_WARNING = "⚠️"
+EMOJI_ERROR = "❌"
+EMOJI_INFO = "ℹ️"
+EMOJI_PROCESSING = "🔄"
+EMOJI_START = "🚀"
+EMOJI_COMPLETE = "🎉"
 
-    def get_prompt_text(self, prompt_id: str) -> str:
-        """Retrieve prompt text based on the prompt ID."""
-        if prompt_id.startswith('P'):
-            index = int(prompt_id[1:])  # Extract the number from 'P1', 'P2', etc.
-            prompt_text = os.getenv(f'PROMPT{index}_PROMPT_TEXT')
-            return prompt_text if prompt_text else ""
-        return prompt_id  # Return the direct prompt if not an ID
+# Load models from .env
+MODELS = []
+model_count = 1
+while True:
+    model_name = os.getenv(f'LLM_{model_count}_TITLE')
+    model_api_url = os.getenv(f'LLM_{model_count}_API_URL')
+    model_api_key = os.getenv(f'LLM_{model_count}_API_KEY')
+    model_model = os.getenv(f'LLM_{model_count}_MODEL')
+    if not model_name or not model_api_url or not model_model:
+        break
+    MODELS.append({
+        'number': model_count,
+        'name': model_name,
+        'api_url': model_api_url,
+        'api_key': model_api_key,
+        'model': model_model
+    })
+    model_count += 1
 
-    def parse_prompts(self, prompt_input: str) -> List[str]:
-        """Parse the input to handle both direct prompts and prompt IDs."""
-        prompts = prompt_input.split(',')
-        return [self.get_prompt_text(p.strip()) for p in prompts]
+# Load prompts from LLM_Prompts.json
+PROMPTS_FILE = 'LLM_Prompts.json'
 
-    @retry_with_backoff(max_retries=5, initial_wait=1, backoff_factor=2)
-    def send_llm_request(self, prompt: str, model_number: int) -> Optional[Dict[str, Any]]:
-        llm_config = self.get_llm_config(model_number)
-        if not llm_config:
-            return None
+if not os.path.exists(PROMPTS_FILE):
+    # Create a sample LLM_Prompts.json file if it doesn't exist
+    sample_prompts = {
+        "PROMPT1": {
+            "PROMPT_TEXT": "You will be given an image to describe in detail. Your task is to provide a comprehensive and accurate description of the contents of the image.\n\nFollow these steps to describe the image:\n\n1. Begin by identifying the main subject or focus of the image. What immediately draws your attention?\n\n2. Describe the overall scene or setting. Is it indoors or outdoors? What time of day does it appear to be?\n\n3. Provide details about the main elements in the image, including:\n   - People: Describe their appearance, clothing, actions, and expressions\n   - Objects: Identify and describe key objects, their colors, sizes, and positions\n   - Animals: If present, describe their species, actions, and appearance\n   - Nature: Describe any natural elements like plants, trees, water bodies, or landscapes\n   - Buildings or structures: Describe their architecture, size, and condition\n\n4. Pay attention to colors, lighting, and atmosphere. How do these elements contribute to the overall mood or feel of the image?\n\n5. Describe any text or signage visible in the image.\n\n6. Note any unusual or striking features that stand out.\n\n7. If relevant, describe the composition of the image, including foreground, middle ground, and background elements.\n\n8. If the image depicts an action or event, describe what appears to be happening.\n\nProvide your description in clear, concise language. Be as objective as possible, focusing on what you can actually see rather than making assumptions or interpretations.\n\nIf any part of the image is unclear or difficult to discern, mention this in your description.\n\nIf for any reason you are unable to process or analyze the image, please state this clearly and explain why (e.g., \"I'm sorry, but I am unable to view or analyze the image provided.\").\n\nPresent your final description in detail so a blind person can see the image and an artist can paint it.",
+            "TEMPERATURE": 0.7,
+            "MAX_TOKENS": 1000
+        }  # Add a comma here if this is part of a larger dictionary
+        # Add more prompts as needed
+    }
+    with open(PROMPTS_FILE, 'w') as f:
+        json.dump(sample_prompts, f, indent=4)
+
+with open(PROMPTS_FILE, 'r') as f:
+    PROMPTS = json.load(f)
+
+class LLMAnalyzer:
+    def __init__(self, api_base_url: str, api_key: str, model: str, title: str = "", debug: bool = False):
+        self.api_base_url = api_base_url
+        self.api_key = api_key
+        self.model = model
+        self.title = title
+        self.debug = debug
+        if self.debug:
+            logging.debug(f"{EMOJI_INFO} LLMAnalyzer initialized with model {model} and title '{title}'")
+
+    def process_image(self, image_path: str, prompt: str, output_file: Optional[str] = None):
+        logging.info(f"{EMOJI_PROCESSING} Processing image: {image_path}")
+        with open(image_path, "rb") as image_file:
+            image_data = base64.b64encode(image_file.read()).decode("utf-8")
+
+        prompt_details = PROMPTS.get(prompt, {})
+        prompt_text = prompt_details.get('PROMPT_TEXT', prompt)
+        temperature = float(prompt_details.get('TEMPERATURE', 0.7))
+        max_tokens = int(prompt_details.get('MAX_TOKENS', 1000))
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt_text},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                    ]
+                }
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
 
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {llm_config['api_key']}"
-        }
-        payload = {
-            "prompt": prompt,
-            "model": llm_config['model'],
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
         }
 
-        try:
-            log_payload = {**payload, "prompt": "[PROMPT_CONTENT]"}
-            self.logger.debug(f"Sending LLM request with payload: {log_payload}")
+        response = requests.post(self.api_base_url, headers=headers, json=payload)
 
-            response = requests.post(
-                f"{llm_config['api_url']}/llm",
-                json=payload,
-                headers=headers,
-                timeout=self.config.timeout
-            )
-            response.raise_for_status()
-            response_data = response.json()
-            return response_data
-        except requests.HTTPError as e:
-            self.logger.error(f"HTTP error occurred during LLM request: {e}")
-            self.logger.error(f"Response content: {e.response.text if e.response else 'No response content'}")
-            return None
-        except requests.RequestException as e:
-            self.logger.error(f"Error in LLM API request: {str(e)}")
-            return None
+        if response.status_code == 200:
+            logging.info(f"{EMOJI_SUCCESS} Image processed successfully.")
+            result = response.json()
+            if output_file:
+                with open(output_file, "w") as f:
+                    json.dump(result, f, indent=4)
+                logging.info(f"{EMOJI_COMPLETE} Results saved to {output_file}")
+            else:
+                print(json.dumps(result, indent=4))
+        else:
+            logging.error(f"{EMOJI_ERROR} Failed to process image. Status code: {response.status_code}")
+            logging.error(f"{EMOJI_ERROR} Response: {response.text}")
 
-    def process_images(self, image_path: str, prompt_input: str, model_number: int):
-        existing_files = json_utils.get_existing_json_files(self.config.output_directory)
-        if json_utils.should_process_file(image_path, existing_files, self.__class__.__name__, self.config):
-            parsed_prompts = self.parse_prompts(prompt_input)  # Parse the prompts
-            for prompt in parsed_prompts:
-                result = self.send_llm_request(prompt, model_number)
-                if result is not None:
-                    self.save_result(image_path, result)
-                else:
-                    self.logger.warning(f"Skipping JSON creation for {image_path} due to LLM request error")
+def list_models(models: List[Dict[str, Any]]):
+    """
+    Lists all available models with their information (excluding API keys).
 
-    def create_prompt(self, image_path: str, mode: str) -> str:
-        # Create a prompt based on the image and mode
-        return f"Analyze the image {image_path} in {mode} mode."
+    Args:
+        models (List[Dict[str, Any]]): List of model dictionaries.
+    """
+    print(f"{EMOJI_INFO} Available Models:")
+    for model in models:
+        print(f"  {EMOJI_INFO} Model {model['number']}: {model['name']}")
+        print(f"      API URL: {model['api_url']}")
+        print(f"      Model: {model['model']}\n")
 
-    def get_image_files(self):
-        for root, _, files in os.walk(self.config.image_directory):
-            for file in files:
-                if file.lower().endswith(tuple(self.config.image_file_extensions)):
-                    yield os.path.join(root, file)
+def list_prompts(prompts: Dict[str, Dict[str, Any]]):
+    """
+    Lists all available prompts defined in the LLM_Prompts.json file.
 
+    Args:
+        prompts (Dict[str, Dict[str, Any]]): Dictionary of prompt IDs and their details.
+    """
+    if not prompts:
+        print(f"{EMOJI_WARNING} No prompts found in the LLM_Prompts.json file.")
+        return
+
+    print(f"{EMOJI_INFO} Available Prompts:")
+    for prompt_id, prompt_details in sorted(prompts.items()):
+        first_line = prompt_details['PROMPT_TEXT'].splitlines()[0]
+        print(f"  {EMOJI_INFO} {prompt_id}: {first_line}... (Temperature: {prompt_details['TEMPERATURE']}, Max Tokens: {prompt_details['MAX_TOKENS']})")
+
+def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Analyze an image using a selected LLM (Language Model) API and generate a JSON file with the results."
+    )
+    parser.add_argument(
+        "image_path",
+        type=str,
+        nargs='?',
+        help="Path to the image file to be processed."
+    )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        help="Comma-separated prompts or prompt IDs (e.g., 'Describe the image, P1, P2'). Use 'list' to display all prompts."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help=f"Model number for analysis (1-{len(MODELS)}) or 'list' to display all models."
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Optional output file path for the JSON results."
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging."
+    )
+
+    args = parser.parse_args()
+
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Handle --model list and --prompt list
+    if args.model and args.model.lower() == 'list':
+        list_models(MODELS)
+
+    if args.prompt and args.prompt.lower() == 'list':
+        list_prompts(PROMPTS)
+
+    # If either --model or --prompt is 'list', and no other arguments, exit
+    if (args.model and args.model.lower() == 'list') or (args.prompt and args.prompt.lower() == 'list'):
+        exit(0)
+
+    # Ensure required arguments are provided for analysis
+    if not args.image_path or not args.prompt or not args.model:
+        parser.error("the following arguments are required for analysis: image_path, --prompt, --model")
+
+    # Validate model number
+    try:
+        model_number = int(args.model)
+        selected_model = next((model for model in MODELS if model['number'] == model_number), None)
+        if not selected_model:
+            logging.error(f"{EMOJI_ERROR} Invalid model number: {model_number}. Use '--model list' to see available models.")
+            exit(1)
+    except ValueError:
+        logging.error(f"{EMOJI_ERROR} Invalid model value: {args.model}. It should be an integer between 1 and {len(MODELS)} or 'list'.")
+        exit(1)
+
+    # Initialize LLMAnalyzer
+    analyzer = LLMAnalyzer(
+        api_base_url=selected_model['api_url'],
+        api_key=selected_model['api_key'],
+        model=selected_model['model'],
+        title=selected_model['name'],
+        debug=args.debug
+    )
+
+    # Process the image
+    analyzer.process_image(args.image_path, args.prompt, args.output)
+
+if __name__ == "__main__":
+    main()
