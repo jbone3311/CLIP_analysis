@@ -16,6 +16,19 @@ import os
 import json
 import argparse
 from typing import List, Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Load status messages from .env or set default words
+EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "SUCCESS")
+EMOJI_WARNING = os.getenv("EMOJI_WARNING", "WARNING")
+EMOJI_ERROR = os.getenv("EMOJI_ERROR", "ERROR")
+EMOJI_INFO = os.getenv("EMOJI_INFO", "INFO")
+EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "PROCESSING")
+EMOJI_START = os.getenv("EMOJI_START", "START")
+EMOJI_COMPLETE = os.getenv("EMOJI_COMPLETE", "COMPLETE")
 
 def encode_image_to_base64(image_path: str) -> str:
     """
@@ -44,7 +57,7 @@ def save_json(data: Dict[str, Any], filename: str):
     try:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
-        print(f"✅ Saved output to {filename}")
+        print(f"{EMOJI_SUCCESS} Saved output to {filename}")
     except Exception as e:
         raise IOError(f"Failed to save JSON to {filename}. Error: {e}")
 
@@ -118,7 +131,7 @@ def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str
             response.raise_for_status()
             prompts[mode] = response.json()
         except requests.RequestException as e:
-            print(f"❌ Failed to get prompt for mode '{mode}'. Error: {e}")
+            print(f"{EMOJI_ERROR} Failed to get prompt for mode '{mode}'. Error: {e}")
             prompts[mode] = {"error": str(e)}
     
     return prompts
@@ -183,7 +196,7 @@ def main():
     
     # Verify that the image file exists
     if not os.path.isfile(image_path):
-        print(f"❌ Image file '{image_path}' not found.")
+        print(f"{EMOJI_ERROR} Image file '{image_path}' not found.")
         return
     
     results = {
@@ -195,26 +208,26 @@ def main():
     
     # Generate prompts
     if modes:
-        print(f"🔍 Generating prompts for modes: {', '.join(modes)}")
+        print(f"{EMOJI_PROCESSING} Generating prompts for modes: {', '.join(modes)}")
         try:
             prompts = prompt_image(image_path, api_base_url, model, modes)
             results["prompts"] = prompts
         except Exception as e:
-            print(f"❌ An error occurred during prompt generation: {e}")
+            print(f"{EMOJI_ERROR} An error occurred during prompt generation: {e}")
     
     # Perform analysis
-    print("📊 Performing image analysis.")
+    print(f"{EMOJI_PROCESSING} Performing image analysis.")
     try:
         analysis = analyze_image(image_path, api_base_url, model)
         results["analysis"] = analysis
     except Exception as e:
-        print(f"❌ An error occurred during analysis: {e}")
+        print(f"{EMOJI_ERROR} An error occurred during analysis: {e}")
     
     # Save results to JSON
     try:
         save_json(results, output_filename)
     except Exception as e:
-        print(f"❌ Failed to save results: {e}")
+        print(f"{EMOJI_ERROR} Failed to save results: {e}")
 
 if __name__ == "__main__":
     main()

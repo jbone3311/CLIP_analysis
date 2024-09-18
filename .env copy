@@ -1,0 +1,66 @@
+# API Configuration
+API_BASE_URL=http://localhost:7860
+TIMEOUT=30
+
+# CLIP Settings
+CLIP_MODEL_NAME=ViT-L-14/openai
+ENABLE_CLIP_ANALYSIS=True
+ENABLE_CAPTION=True
+ENABLE_BEST=False
+ENABLE_FAST=True
+ENABLE_CLASSIC=True
+ENABLE_NEGATIVE=False
+
+PROCESS_JSON_TO_TXT=true
+
+# LLM Settings
+ENABLE_LLM_ANALYSIS=False
+
+LLM_1_TITLE=GPT-4o
+LLM_1_API_URL=https://api.openai.com/v1/chat/completions
+LLM_1_API_KEY=
+
+LLM_2_TITLE=ollama  
+LLM_2_API_URL=http://localhost:11434
+LLM_2_API_KEY=
+LLM_2_MODEL=llama3.1
+
+LLM_3_TITLE=ollama
+LLM_3_API_URL=http://localhost:11434
+LLM_3_API_KEY=
+LLM_3_MODEL=llama3-groq-tool-use
+
+LLM_4_TITLE=LLM 4
+LLM_4_API_URL=http://localhost:8004
+LLM_4_API_KEY=YOUR_API_KEY_4
+LLM_4_MODEL=gpt-4
+
+LLM_5_TITLE=LLM 5
+LLM_5_API_URL=http://localhost:8005
+LLM_5_API_KEY=YOUR_API_KEY_5
+LLM_5_MODEL=gpt-4
+
+
+# General Settings
+ENABLE_JSON_PROCESSING=True
+IMAGE_DIRECTORY=Images
+OUTPUT_DIRECTORY=Output
+LOGGING_LEVEL=DEBUG
+LOG_API_CONVERSATION=True
+RETRY_LIMIT=5
+
+# LLM Parameters (these can be overridden by prompt-specific settings)
+TEMPERATURE=0.7
+MAX_TOKENS=300
+TOP_P=1.0
+FREQUENCY_PENALTY=0.0
+PRESENCE_PENALTY=0.0
+
+# Emoji Definitions
+EMOJI_SUCCESS=✅
+EMOJI_WARNING=⚠️
+EMOJI_ERROR=❌
+EMOJI_INFO=ℹ️
+EMOJI_PROCESSING=🔄
+EMOJI_START=🚀
+EMOJI_COMPLETE=🎉

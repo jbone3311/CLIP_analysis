@@ -38,14 +38,14 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Define emojis as constants for better manageability
-EMOJI_SUCCESS = "✅"
-EMOJI_WARNING = "⚠️"
-EMOJI_ERROR = "❌"
-EMOJI_INFO = "ℹ️"
-EMOJI_PROCESSING = "🔄"
-EMOJI_START = "🚀"
-EMOJI_COMPLETE = "🎉"
+# Load status messages from .env or set default words
+EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "SUCCESS")
+EMOJI_WARNING = os.getenv("EMOJI_WARNING", "WARNING")
+EMOJI_ERROR = os.getenv("EMOJI_ERROR", "ERROR")
+EMOJI_INFO = os.getenv("EMOJI_INFO", "INFO")
+EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "PROCESSING")
+EMOJI_START = os.getenv("EMOJI_START", "START")
+EMOJI_COMPLETE = os.getenv("EMOJI_COMPLETE", "COMPLETE")
 
 # Load models from .env
 MODELS = []
