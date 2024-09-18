@@ -61,39 +61,23 @@ def save_json(data: Dict[str, Any], filename: str):
     except Exception as e:
         raise IOError(f"Failed to save JSON to {filename}. Error: {e}")
 
-def analyze_image(image_path: str, api_base_url: str, model: str, timeout: int = 60) -> Dict[str, Any]:
-    """
-    Sends an image to the CLIP API for analysis.
-
-    Args:
-        image_path (str): The path to the image file.
-        api_base_url (str): The base URL of the API.
-        model (str): The model name to use for analysis.
-        timeout (int): The timeout for the API request (default is 60 seconds).
-
-    Returns:
-        dict: The JSON response from the API containing analysis results.
-    """
-    image_base64 = encode_image_to_base64(image_path)
-    
-    payload = {
-        "image": image_base64,
-        "model": model
-    }
-    
-    headers = {"Content-Type": "application/json"}
-    
-    try:
-        response = requests.post(
-            f"{api_base_url}/interrogator/analyze",
-            json=payload,
-            headers=headers,
-            timeout=timeout
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        raise ConnectionError(f"API request failed during analysis. Error: {e}")
+def analyze_image(image_path: str, enable_clip_analysis: bool, enable_caption: bool,
+                  enable_best: bool, enable_fast: bool, enable_classic: bool, enable_negative: bool) -> dict:
+    # Placeholder for actual analysis logic based on CLIP settings
+    analysis_result = {}
+    if enable_clip_analysis:
+        analysis_result["clip_analysis"] = "CLIP analysis performed."
+    if enable_caption:
+        analysis_result["caption"] = "Generated caption for the image."
+    if enable_best:
+        analysis_result["best"] = "Best analysis results."
+    if enable_fast:
+        analysis_result["fast"] = "Fast analysis completed."
+    if enable_classic:
+        analysis_result["classic"] = "Classic analysis mode."
+    if enable_negative:
+        analysis_result["negative"] = "Negative analysis performed."
+    return analysis_result
 
 def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str], timeout: int = 60) -> Dict[str, Any]:
     """
@@ -168,12 +152,10 @@ def parse_arguments() -> argparse.Namespace:
     )
     
     parser.add_argument(
-        "--modes",
-        type=str,
+        '--modes',
         nargs='+',
-        choices=['best', 'fast', 'classic', 'negative', 'caption'],
-        default=['best', 'fast', 'classic', 'negative', 'caption'],
-        help="Prompt modes to generate. Choose from 'best', 'fast', 'classic', 'negative', 'caption'. Default is all."
+        choices=['best', 'fast', 'classic', 'negative'],
+        help='Specify modes to use for analysis'
     )
     
     parser.add_argument(
@@ -186,48 +168,48 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 def main():
-    args = parse_arguments()
-    
-    image_path = args.image_path
-    api_base_url = args.api_base_url
-    model = args.model
-    modes = args.modes
-    output_filename = args.output
-    
-    # Verify that the image file exists
-    if not os.path.isfile(image_path):
-        print(f"{EMOJI_ERROR} Image file '{image_path}' not found.")
-        return
-    
-    results = {
-        "image": os.path.abspath(image_path),
-        "model": model,
-        "prompts": {},
-        "analysis": {}
-    }
-    
-    # Generate prompts
-    if modes:
-        print(f"{EMOJI_PROCESSING} Generating prompts for modes: {', '.join(modes)}")
-        try:
-            prompts = prompt_image(image_path, api_base_url, model, modes)
-            results["prompts"] = prompts
-        except Exception as e:
-            print(f"{EMOJI_ERROR} An error occurred during prompt generation: {e}")
-    
-    # Perform analysis
-    print(f"{EMOJI_PROCESSING} Performing image analysis.")
+    args = parse_arguments()  # Use the existing argument parser
+
+    config = Config()
+    setup_logging(config)
+
     try:
-        analysis = analyze_image(image_path, api_base_url, model)
-        results["analysis"] = analysis
+        if not os.path.isfile(args.image_path):
+            raise FileNotFoundError(f"Image file '{args.image_path}' does not exist.")
+
+        analysis_result = analyze_image(
+            args.image_path,
+            enable_clip_analysis=args.enable_clip_analysis,
+            enable_caption=args.enable_caption,
+            enable_best=args.enable_best,
+            enable_fast=args.enable_fast,
+            enable_classic=args.enable_classic,
+            enable_negative=args.enable_negative
+        )
+        filename = os.path.basename(args.image_path)
+        
+        results = {
+            "filename": filename,
+            "analysis": analysis_result
+        }
+
+        if args.output_to_stdout:
+            print(json.dumps(results, indent=4))
+        else:
+            json_path = os.path.join(config.output_directory, f"{os.path.splitext(filename)[0]}.json")
+            with open(json_path, "w") as f:
+                json.dump(results, f, indent=4)
+            logging.info(f"{config.EMOJI_COMPLETE} Results saved to {json_path}")
+
     except Exception as e:
-        print(f"{EMOJI_ERROR} An error occurred during analysis: {e}")
-    
-    # Save results to JSON
-    try:
-        save_json(results, output_filename)
-    except Exception as e:
-        print(f"{EMOJI_ERROR} Failed to save results: {e}")
+        error_result = {"error": str(e)}
+        if args.output_to_stdout:
+            print(json.dumps(error_result))
+        else:
+            json_path = os.path.join(config.output_directory, f"{os.path.splitext(filename)[0]}_error.json")
+            with open(json_path, "w") as f:
+                json.dump(error_result, f, indent=4)
+            logging.error(f"{config.EMOJI_ERROR} Failed to process image {args.image_path}: {e}")
 
 if __name__ == "__main__":
     main()

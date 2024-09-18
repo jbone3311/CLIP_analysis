@@ -34,7 +34,8 @@ import json
 import base64
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
-
+from config import Config 
+from utils import generate_unique_code, setup_logging
 # Load environment variables from .env file
 load_dotenv()
 
@@ -200,11 +201,13 @@ def main():
     parser.add_argument(
         "--prompt",
         type=str,
+        required=True,
         help="Comma-separated prompts or prompt IDs (e.g., 'Describe the image, P1, P2'). Use 'list' to display all prompts."
     )
     parser.add_argument(
         "--model",
-        type=str,
+        type=int,
+        required=True,
         help=f"Model number for analysis (1-{len(MODELS)}) or 'list' to display all models."
     )
     parser.add_argument(
@@ -217,53 +220,49 @@ def main():
         action="store_true",
         help="Enable debug logging."
     )
+    parser.add_argument(
+        "--output-to-stdout",
+        action="store_true",
+        help="Output JSON to stdout instead of saving to a file."
+    )
 
     args = parser.parse_args()
 
-    # Configure root logger
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    config = Config()
+    setup_logging(config)
 
-    # Handle --model list and --prompt list
-    if args.model and args.model.lower() == 'list':
-        list_models(MODELS)
-
-    if args.prompt and args.prompt.lower() == 'list':
-        list_prompts(PROMPTS)
-
-    # If either --model or --prompt is 'list', and no other arguments, exit
-    if (args.model and args.model.lower() == 'list') or (args.prompt and args.prompt.lower() == 'list'):
-        exit(0)
-
-    # Ensure required arguments are provided for analysis
-    if not args.image_path or not args.prompt or not args.model:
-        parser.error("the following arguments are required for analysis: image_path, --prompt, --model")
-
-    # Validate model number
     try:
-        model_number = int(args.model)
-        selected_model = next((model for model in MODELS if model['number'] == model_number), None)
-        if not selected_model:
-            logging.error(f"{EMOJI_ERROR} Invalid model number: {model_number}. Use '--model list' to see available models.")
-            exit(1)
-    except ValueError:
-        logging.error(f"{EMOJI_ERROR} Invalid model value: {args.model}. It should be an integer between 1 and {len(MODELS)} or 'list'.")
-        exit(1)
+        if not os.path.isfile(args.image_path):
+            raise FileNotFoundError(f"Image file '{args.image_path}' does not exist.")
 
-    # Initialize LLMAnalyzer
-    analyzer = LLMAnalyzer(
-        api_base_url=selected_model['api_url'],
-        api_key=selected_model['api_key'],
-        model=selected_model['model'],
-        title=selected_model['name'],
-        debug=args.debug
-    )
+        prompts = [p.strip() for p in args.prompt.split(',')]
+        llm_results = analyze_image_with_llm(args.image_path, prompts, args.model)
+        unique_id = generate_unique_code(args.image_path)
+        filename = os.path.basename(args.image_path)
+        
+        results = {
+            "unique_id": unique_id,
+            "filename": filename,
+            "llm_analysis": llm_results
+        }
 
-    # Process the image
-    prompts = [p.strip() for p in args.prompt.split(',')]
-    analyzer.process_image(args.image_path, prompts, args.output)
+        if args.output_to_stdout:
+            print(json.dumps(results, indent=4))
+        else:
+            json_path = f"{os.path.splitext(args.image_path)[0]}_llm.json"
+            with open(json_path, "w") as f:
+                json.dump(results, f, indent=4)
+            logging.info(f"{config.EMOJI_COMPLETE} Results saved to {json_path}")
+
+    except Exception as e:
+        error_result = {"error": str(e)}
+        if args.output_to_stdout:
+            print(json.dumps(error_result))
+        else:
+            error_json_path = f"{os.path.splitext(args.image_path)[0]}_llm_error.json"
+            with open(error_json_path, "w") as f:
+                json.dump(error_result, f, indent=4)
+            logging.error(f"{config.EMOJI_ERROR} Failed to process image {args.image_path}: {e}")
 
 if __name__ == "__main__":
     main()

@@ -49,13 +49,6 @@ LOGGING_LEVEL=DEBUG
 LOG_API_CONVERSATION=True
 RETRY_LIMIT=5
 
-# LLM Parameters (these can be overridden by prompt-specific settings)
-TEMPERATURE=0.7
-MAX_TOKENS=300
-TOP_P=1.0
-FREQUENCY_PENALTY=0.0
-PRESENCE_PENALTY=0.0
-
 # Emoji Definitions
 EMOJI_SUCCESS=✅
 EMOJI_WARNING=⚠️
