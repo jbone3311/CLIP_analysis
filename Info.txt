@@ -22,3 +22,12 @@
    - git add .
    - git commit -m "Your commit message"
    - git push origin main
+
+
+
+
+   Poetry:
+   poetry init --no-interaction
+Get-Content requirements.txt | ForEach-Object { poetry add $_ }
+poetry install
+poetry shell

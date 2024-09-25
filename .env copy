@@ -1,3 +1,5 @@
+# .env
+
 # API Configuration
 API_BASE_URL=http://localhost:7860
 TIMEOUT=30
@@ -18,7 +20,8 @@ ENABLE_LLM_ANALYSIS=False
 
 LLM_1_TITLE=GPT-4o
 LLM_1_API_URL=https://api.openai.com/v1/chat/completions
-LLM_1_API_KEY=
+LLM_1_API_KEY=sk-YhvBlbkFJE6q9jpUgBWvgj0A
+LLM_1_MODEL=gpt-4o
 
 LLM_2_TITLE=ollama  
 LLM_2_API_URL=http://localhost:11434
@@ -40,7 +43,6 @@ LLM_5_API_URL=http://localhost:8005
 LLM_5_API_KEY=YOUR_API_KEY_5
 LLM_5_MODEL=gpt-4
 
-
 # General Settings
 ENABLE_JSON_PROCESSING=True
 IMAGE_DIRECTORY=Images
@@ -49,11 +51,26 @@ LOGGING_LEVEL=DEBUG
 LOG_API_CONVERSATION=True
 RETRY_LIMIT=5
 
+# Duplicate Detection Settings
+USE_DATABASE=False
+USE_JSON=True
+
+# Database Configuration
+DATABASE_PATH=image_analysis.db
+
 # Emoji Definitions
-EMOJI_SUCCESS=✅
-EMOJI_WARNING=⚠️
-EMOJI_ERROR=❌
-EMOJI_INFO=ℹ️
-EMOJI_PROCESSING=🔄
-EMOJI_START=🚀
-EMOJI_COMPLETE=🎉
+EMOJI_SUCCESS=(SUCCESS)
+EMOJI_WARNING=(WARNING)
+EMOJI_ERROR=(ERROR)
+EMOJI_INFO=(INFO)
+EMOJI_PROCESSING=(PROCESSING)
+EMOJI_START=(START)
+EMOJI_COMPLETE=(COMPLETE)
+
+# EMOJI_SUCCESS=✅
+# EMOJI_WARNING=⚠️
+# EMOJI_ERROR=❌
+# EMOJI_INFO=ℹ️
+# EMOJI_PROCESSING=🔄
+# EMOJI_START=🚀
+# EMOJI_COMPLETE=🎉

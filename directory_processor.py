@@ -7,6 +7,12 @@ from config import Config
 from utils import generate_unique_code, setup_logging, save_json, load_json
 from db_utils import Database
 from typing import Optional
+import sys
+import io
+
+# Set the console encoding to UTF-8
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 class DirectoryProcessor:
     def __init__(self, config: Config):
@@ -49,7 +55,7 @@ class DirectoryProcessor:
 
                     try:
                         # Prepare CLIP arguments based on enabled settings
-                        clip_args = []
+                        clip_args = ['--modes', 'best', 'fast', 'classic', 'negative', 'caption']
                         if self.config.enable_clip_analysis:
                             clip_args.append('--enable-clip-analysis')
                         if self.config.enable_caption:

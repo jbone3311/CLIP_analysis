@@ -6,7 +6,7 @@
             "prompt": "painting of a woman walking in water with a waterfall in the background, fire and brimstone, steve henderson and mark brooks, radiating with power, but can only be burned, youtube thumbnail, dressed like jesus christ, glass ceilings, arson, female alive"
         },
         "fast": {
-            "prompt": "painting of a woman walking in water with a waterfall in the background, flames surround her, walking out of flames, standing in fire, by Christophe Vacher, female ascending, woman made of black flames, energy flows of water and fire, by Magali Villeneuve, appears as the fire goddess, by Jon Foster, prophetic art, powerful painting"
+            "prompt": "painting of a woman walking in water with a waterfall in the background, flames surround her, walking out of flames, standing in fire, by Christophe Vacher, woman made of black flames, female ascending, energy flows of water and fire, appears as the fire goddess, by Magali Villeneuve, by Jon Foster, prophetic art, powerful painting"
         }
     },
     "analysis": {
@@ -14,7 +14,7 @@
             "an oil on canvas painting": 0.1920166015625,
             "a detailed painting": 0.189208984375,
             "a fine art painting": 0.1885986328125,
-            "an oil painting": 0.18603515625,
+            "an oil painting": 0.1859130859375,
             "a painting": 0.1826171875
         },
         "artist": {
@@ -32,7 +32,7 @@
             "fantasy art": 0.17138671875
         },
         "trending": {
-            "trending on deviantart": 0.1651611328125,
+            "trending on deviantart": 0.165283203125,
             "featured on deviantart": 0.1651611328125,
             "deviantart": 0.163330078125,
             "trending on pinterest": 0.1583251953125,
@@ -42,8 +42,8 @@
             "flames surround her": 0.2381591796875,
             "walking out of flames": 0.236083984375,
             "standing in fire": 0.2335205078125,
-            "woman made of black flames": 0.2310791015625,
-            "female ascending": 0.23095703125
+            "female ascending": 0.23095703125,
+            "woman made of black flames": 0.2310791015625
         }
     }
 }

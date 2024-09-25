@@ -1,3 +1,4 @@
+###### FILENAME: analysis_LLM.py ######
 #!/usr/bin/env python3
 """
 LLMAnalyzer Standalone Script
@@ -7,17 +8,17 @@ It accepts prompts directly or via prompt IDs defined in a LLM_Prompts.json file
 sends requests to the API, and generates a JSON file with the results.
 
 Usage:
-    python analysis_LLM.py <image_path> --prompt <prompt> --model <model_number> [--output <output_file>] [--debug]
+    python analysis_LLM.py <image_path> --prompt <prompt1,prompt2,...> --model <model_number> [--output <output_file>] [--debug]
 
 Arguments:
     image_path: Path to the image file to be processed.
-    --prompt: Comma-separated prompts or prompt IDs (e.g., 'Describe the image, P1, P2'). Use 'list' to display all prompts.
-    --model: Model number for analysis (1-N) or 'list' to display all models.
+    --prompt: Comma-separated prompts or prompt IDs (e.g., 'PROMPT1,PROMPT2'). Use 'list' to display all prompts.
+    --model: Model number for analysis (1-5) or 'list' to display all models.
     --output: Optional output file path for the JSON results.
     --debug: Enable debug logging.
 
 Example:
-    python analysis_LLM.py test.png --prompt "P1" --model 1 --output results.json
+    python analysis_LLM.py test.png --prompt "PROMPT1,PROMPT2" --model 2 --output results.json
 
 To list all available models:
     python analysis_LLM.py --model list
@@ -32,39 +33,62 @@ import requests
 import argparse
 import json
 import base64
+import sys
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
+import time
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Load status messages from .env or set default words
-EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "SUCCESS")
-EMOJI_WARNING = os.getenv("EMOJI_WARNING", "WARNING")
-EMOJI_ERROR = os.getenv("EMOJI_ERROR", "ERROR")
-EMOJI_INFO = os.getenv("EMOJI_INFO", "INFO")
-EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "PROCESSING")
-EMOJI_START = os.getenv("EMOJI_START", "START")
-EMOJI_COMPLETE = os.getenv("EMOJI_COMPLETE", "COMPLETE")
+# Load status messages from .env or set default text labels
+EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "(SUCCESS)")
+EMOJI_WARNING = os.getenv("EMOJI_WARNING", "(WARNING)")
+EMOJI_ERROR = os.getenv("EMOJI_ERROR", "(ERROR)")
+EMOJI_INFO = os.getenv("EMOJI_INFO", "(INFO)")
+EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "(PROCESSING)")
+EMOJI_START = os.getenv("EMOJI_START", "(START)")
+EMOJI_COMPLETE = os.getenv("EMOJI_COMPLETE", "(COMPLETE)")
 
-# Load models from .env
-MODELS = []
-model_count = 1
-while True:
-    model_name = os.getenv(f'LLM_{model_count}_TITLE')
-    model_api_url = os.getenv(f'LLM_{model_count}_API_URL')
-    model_api_key = os.getenv(f'LLM_{model_count}_API_KEY')
-    model_model = os.getenv(f'LLM_{model_count}_MODEL')
-    if not model_name or not model_api_url or not model_model:
-        break
-    MODELS.append({
-        'number': model_count,
-        'name': model_name,
-        'api_url': model_api_url,
-        'api_key': model_api_key,
-        'model': model_model
-    })
-    model_count += 1
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+class Config:
+    RETRY_LIMIT = int(os.getenv("RETRY_LIMIT", 5))
+    TIMEOUT = int(os.getenv("TIMEOUT", 60))
+    LOG_API_CONVERSATION = os.getenv("LOG_API_CONVERSATION", "False").lower() in ("true", "1", "t")
+
+# Load LLM models from .env
+def load_llm_models() -> List[Dict[str, str]]:
+    """
+    Loads all defined LLM models from the .env file.
+
+    Returns:
+        List[Dict[str, str]]: A list of dictionaries containing LLM model configurations.
+    """
+    models = []
+    model_number = 1
+    while True:
+        model_title = os.getenv(f"LLM_{model_number}_TITLE")
+        model_api_url = os.getenv(f"LLM_{model_number}_API_URL")
+        model_api_key = os.getenv(f"LLM_{model_number}_API_KEY")
+        model_model = os.getenv(f"LLM_{model_number}_MODEL")
+        if not model_title or not model_api_url or not model_model:
+            break
+        models.append({
+            "number": model_number,
+            "title": model_title,
+            "api_url": model_api_url,
+            "api_key": model_api_key,
+            "model_name": model_model
+        })
+        model_number += 1
+    return models
+
+MODELS = load_llm_models()
 
 # Load prompts from LLM_Prompts.json
 PROMPTS_FILE = 'LLM_Prompts.json'
@@ -91,23 +115,51 @@ if not os.path.exists(PROMPTS_FILE):
 with open(PROMPTS_FILE, 'r') as f:
     PROMPTS = json.load(f)
 
+def retry_request(func):
+    """
+    Decorator to retry a function call based on RETRY_LIMIT.
+    """
+    def wrapper(*args, **kwargs):
+        retry_limit = Config.RETRY_LIMIT
+        for attempt in range(1, retry_limit + 1):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                logging.warning(f"{EMOJI_WARNING} Attempt {attempt} failed with error: {e}")
+                if attempt == retry_limit:
+                    logging.error(f"{EMOJI_ERROR} All {retry_limit} attempts failed.")
+                    raise
+                else:
+                    logging.info(f"{EMOJI_INFO} Retrying... ({attempt}/{retry_limit})")
+                    time.sleep(2)  # Wait before retrying
+    return wrapper
+
 class LLMAnalyzer:
-    def __init__(self, api_base_url: str, api_key: str, model: str, title: str = "", debug: bool = False):
-        self.api_base_url = api_base_url
+    def __init__(self, api_url: str, api_key: str, model_name: str, title: str = "", debug: bool = False):
+        self.api_url = api_url
         self.api_key = api_key
-        self.model = model
+        self.model_name = model_name
         self.title = title
         self.debug = debug
         if self.debug:
-            logging.debug(f"{EMOJI_INFO} LLMAnalyzer initialized with model {model} and title '{title}'")
+            logging.debug(f"{EMOJI_INFO} LLMAnalyzer initialized with model '{model_name}' and title '{title}'")
 
+    @staticmethod
+    def save_json(data, file_path):
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    @retry_request
     def process_image(self, image_path: str, prompts: List[str], output_file: Optional[str] = None):
         logging.info(f"{EMOJI_PROCESSING} Processing image: {image_path}")
-        # Get the absolute path of the image
         absolute_image_path = os.path.abspath(image_path)
         
-        with open(image_path, "rb") as image_file:
-            image_data = base64.b64encode(image_file.read()).decode("utf-8")
+        try:
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
+        except Exception as e:
+            logging.error(f"{EMOJI_ERROR} Unable to read image file. Error: {e}")
+            sys.exit(1)
 
         results = []
         for prompt in prompts:
@@ -115,9 +167,14 @@ class LLMAnalyzer:
             prompt_text = prompt_details.get('PROMPT_TEXT', prompt)
             temperature = float(prompt_details.get('TEMPERATURE', 0.7))
             max_tokens = int(prompt_details.get('MAX_TOKENS', 1000))
-
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
             payload = {
-                "model": self.model,
+                "model": self.model_name,
                 "messages": [
                     {
                         "role": "user",
@@ -130,44 +187,42 @@ class LLMAnalyzer:
                 "temperature": temperature,
                 "max_tokens": max_tokens
             }
-
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-
-            response = requests.post(self.api_base_url, headers=headers, json=payload)
-
-            if response.status_code == 200:
+            
+            try:
+                response = requests.post(self.api_url, headers=headers, json=payload, timeout=Config.TIMEOUT)
+                response.raise_for_status()
+                if Config.LOG_API_CONVERSATION:
+                    logging.debug(f"{EMOJI_INFO} API Request sent for prompt '{prompt}'")
+                    logging.debug(f"{EMOJI_INFO} API Response received for prompt '{prompt}'")
                 logging.info(f"{EMOJI_SUCCESS} Prompt '{prompt}' processed successfully.")
-                result = response.json()
                 results.append({
                     "prompt": prompt,
-                    "result": result
+                    "result": response.json()
                 })
-            else:
-                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {response.status_code}")
-                logging.error(f"{EMOJI_ERROR} Response: {response.text}")
+            except requests.RequestException as e:
+                status_code = getattr(e.response, 'status_code', 'N/A')
+                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {status_code}")
                 results.append({
                     "prompt": prompt,
-                    "error": response.text
+                    "error": str(e)
                 })
-
-        # Create a final output structure with the absolute filename
+        
         output_data = {
-            "image": absolute_image_path,  # Use the absolute path
-            "model": self.model,  # Include the model name
+            "image": absolute_image_path,
+            "model": self.model_name,
             "prompts": {
-                "results": results  # Store results under prompts
+                "results": results
             }
         }
-
+        
         if output_file:
-            with open(output_file, "w") as f:
-                json.dump(output_data, f, indent=4)  # Dump the new structure
-            logging.info(f"{EMOJI_COMPLETE} Results saved to {output_file}")
+            try:
+                self.save_json(output_data, output_file)
+                logging.info(f"{EMOJI_SUCCESS} Results saved to {output_file}")
+            except IOError as e:
+                logging.error(f"{EMOJI_ERROR} Failed to save results: {e}")
         else:
-            print(json.dumps(output_data, indent=4))  # Print the new structure
+            print(json.dumps(output_data, indent=4))
 
 def list_models(models: List[Dict[str, Any]]):
     """
@@ -178,9 +233,9 @@ def list_models(models: List[Dict[str, Any]]):
     """
     print(f"{EMOJI_INFO} Available Models:")
     for model in models:
-        print(f"  {EMOJI_INFO} Model {model['number']}: {model['name']}")
+        print(f"  {EMOJI_INFO} Model {model['number']}: {model['title']}")
         print(f"      API URL: {model['api_url']}")
-        print(f"      Model: {model['model']}\n")
+        print(f"      Model: {model['model_name']}\n")
 
 def list_prompts(prompts: Dict[str, Dict[str, Any]]):
     """
@@ -192,14 +247,19 @@ def list_prompts(prompts: Dict[str, Dict[str, Any]]):
     if not prompts:
         print(f"{EMOJI_WARNING} No prompts found in the LLM_Prompts.json file.")
         return
-
+    
     print(f"{EMOJI_INFO} Available Prompts:")
     for prompt_id, prompt_details in sorted(prompts.items()):
         first_line = prompt_details['PROMPT_TEXT'].splitlines()[0]
         print(f"  {EMOJI_INFO} {prompt_id}: {prompt_details['TITLE']} - {first_line}... (Temperature: {prompt_details['TEMPERATURE']}, Max Tokens: {prompt_details['MAX_TOKENS']})")
 
-def main():
-    # Parse command-line arguments
+def parse_arguments() -> argparse.Namespace:
+    """
+    Parses command-line arguments.
+
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Analyze an image using a selected LLM (Language Model) API and generate a JSON file with the results."
     )
@@ -212,7 +272,7 @@ def main():
     parser.add_argument(
         "--prompt",
         type=str,
-        help="Comma-separated prompts or prompt IDs (e.g., 'Describe the image, P1, P2'). Use 'list' to display all prompts."
+        help="Comma-separated prompts or prompt IDs (e.g., 'PROMPT1,PROMPT2'). Use 'list' to display all prompts."
     )
     parser.add_argument(
         "--model",
@@ -229,53 +289,67 @@ def main():
         action="store_true",
         help="Enable debug logging."
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
-
-    # Configure root logger
-    logging.basicConfig(
-        level=logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
+def main():
+    args = parse_arguments()
+    
+    # Print arguments for debugging
+    print(f"Arguments: {args}")
+    
+    # Configure logging levels
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
     # Handle --model list and --prompt list
     if args.model and args.model.lower() == 'list':
         list_models(MODELS)
-
+        sys.exit(0)
+    
     if args.prompt and args.prompt.lower() == 'list':
         list_prompts(PROMPTS)
-
+        sys.exit(0)
+    
     # If either --model or --prompt is 'list', and no other arguments, exit
     if (args.model and args.model.lower() == 'list') or (args.prompt and args.prompt.lower() == 'list'):
-        exit(0)
-
+        sys.exit(0)
+    
     # Ensure required arguments are provided for analysis
     if not args.image_path or not args.prompt or not args.model:
-        parser.error("the following arguments are required for analysis: image_path, --prompt, --model")
-
-    # Validate model number
+        logging.error(f"{EMOJI_ERROR} Missing required arguments: image_path, --prompt, --model")
+        sys.exit(1)
+    
+    # Validate and retrieve model configuration
     try:
         model_number = int(args.model)
-        selected_model = next((model for model in MODELS if model['number'] == model_number), None)
-        if not selected_model:
+        # Check if model_number exists in MODELS
+        model_config = next((model for model in MODELS if model['number'] == model_number), None)
+        if not model_config:
             logging.error(f"{EMOJI_ERROR} Invalid model number: {model_number}. Use '--model list' to see available models.")
-            exit(1)
+            sys.exit(1)
     except ValueError:
         logging.error(f"{EMOJI_ERROR} Invalid model value: {args.model}. It should be an integer between 1 and {len(MODELS)} or 'list'.")
-        exit(1)
-
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"{EMOJI_ERROR} {e}")
+        sys.exit(1)
+    
     # Initialize LLMAnalyzer
     analyzer = LLMAnalyzer(
-        api_base_url=selected_model['api_url'],
-        api_key=selected_model['api_key'],
-        model=selected_model['model'],
-        title=selected_model['name'],
+        api_url=model_config['api_url'],
+        api_key=model_config['api_key'],
+        model_name=model_config['model_name'],
+        title=model_config['title'],
         debug=args.debug
     )
-
+    
     # Process the image
-    prompts = [p.strip() for p in args.prompt.split(',')]
+    prompts = [p.strip() for p in args.prompt.split(',') if p.strip()]
+    if not prompts:
+        logging.error(f"{EMOJI_ERROR} No valid prompts provided.")
+        sys.exit(1)
+    
     analyzer.process_image(args.image_path, prompts, args.output)
-
+    
 if __name__ == "__main__":
     main()
