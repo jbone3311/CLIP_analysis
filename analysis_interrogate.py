@@ -136,13 +136,34 @@ def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str
     
     return prompts
 
-def parse_arguments() -> argparse.Namespace:
-    """
-    Parses command-line arguments.
+def process_image(image_path: str, api_base_url: str, model: str, modes: List[str]) -> Dict[str, Any]:
+    results = {
+        "image": os.path.abspath(image_path),
+        "model": model,
+        "prompts": {},
+        "analysis": {}
+    }
+    
+    # Generate prompts
+    if modes:
+        print(f"{EMOJI_PROCESSING} Generating prompts for modes: {', '.join(modes)}")
+        try:
+            prompts = prompt_image(image_path, api_base_url, model, modes)
+            results["prompts"] = prompts
+        except Exception as e:
+            print(f"{EMOJI_ERROR} An error occurred during prompt generation: {e}")
+    
+    # Perform analysis
+    print(f"{EMOJI_PROCESSING} Performing image analysis.")
+    try:
+        analysis = analyze_image(image_path, api_base_url, model)
+        results["analysis"] = analysis
+    except Exception as e:
+        print(f"{EMOJI_ERROR} An error occurred during analysis: {e}")
+    
+    return results
 
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
+def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Process images to generate prompts and perform analysis using the CLIP API."
     )
@@ -199,29 +220,7 @@ def main():
         print(f"{EMOJI_ERROR} Image file '{image_path}' not found.")
         return
     
-    results = {
-        "image": os.path.abspath(image_path),
-        "model": model,
-        "prompts": {},
-        "analysis": {}
-    }
-    
-    # Generate prompts
-    if modes:
-        print(f"{EMOJI_PROCESSING} Generating prompts for modes: {', '.join(modes)}")
-        try:
-            prompts = prompt_image(image_path, api_base_url, model, modes)
-            results["prompts"] = prompts
-        except Exception as e:
-            print(f"{EMOJI_ERROR} An error occurred during prompt generation: {e}")
-    
-    # Perform analysis
-    print(f"{EMOJI_PROCESSING} Performing image analysis.")
-    try:
-        analysis = analyze_image(image_path, api_base_url, model)
-        results["analysis"] = analysis
-    except Exception as e:
-        print(f"{EMOJI_ERROR} An error occurred during analysis: {e}")
+    results = process_image(image_path, api_base_url, model, modes)
     
     # Save results to JSON
     try:
@@ -231,3 +230,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+else:
+    # This ensures process_image is available when the module is imported
+    __all__ = ['process_image']

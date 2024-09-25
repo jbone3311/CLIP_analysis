@@ -1,26 +1,25 @@
 # .env
 
+ENABLE_PARALLEL_PROCESSING=False
+
 # API Configuration
 API_BASE_URL=http://localhost:7860
-TIMEOUT=30
 
-# CLIP Settings
+# CLIP Interrogator Settings
 CLIP_MODEL_NAME=ViT-L-14/openai
 ENABLE_CLIP_ANALYSIS=True
 ENABLE_CAPTION=True
 ENABLE_BEST=False
 ENABLE_FAST=True
-ENABLE_CLASSIC=True
+ENABLE_CLASSIC=False
 ENABLE_NEGATIVE=False
 
-PROCESS_JSON_TO_TXT=true
-
 # LLM Settings
-ENABLE_LLM_ANALYSIS=False
+ENABLE_LLM_ANALYSIS=True
 
 LLM_1_TITLE=GPT-4o
 LLM_1_API_URL=https://api.openai.com/v1/chat/completions
-LLM_1_API_KEY=sk-YhvBlbkFJE6q9jpUgBWvgj0A
+LLM_1_API_KEY=sk-Y
 LLM_1_MODEL=gpt-4o
 
 LLM_2_TITLE=ollama  

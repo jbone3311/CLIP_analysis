@@ -166,7 +166,7 @@ class LLMAnalyzer:
             prompt_details = PROMPTS.get(prompt, {})
             prompt_text = prompt_details.get('PROMPT_TEXT', prompt)
             temperature = float(prompt_details.get('TEMPERATURE', 0.7))
-            max_tokens = int(prompt_details.get('MAX_TOKENS', 1000))
+            max_tokens = int(prompt_details.get('MAX_TOKENS', 1500))  # Increase the default value
             
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -191,17 +191,13 @@ class LLMAnalyzer:
             try:
                 response = requests.post(self.api_url, headers=headers, json=payload, timeout=Config.TIMEOUT)
                 response.raise_for_status()
-                if Config.LOG_API_CONVERSATION:
-                    logging.debug(f"{EMOJI_INFO} API Request sent for prompt '{prompt}'")
-                    logging.debug(f"{EMOJI_INFO} API Response received for prompt '{prompt}'")
-                logging.info(f"{EMOJI_SUCCESS} Prompt '{prompt}' processed successfully.")
+                logging.info(f"Response from API: {response.json()}")  # Log the entire response
                 results.append({
                     "prompt": prompt,
                     "result": response.json()
                 })
             except requests.RequestException as e:
-                status_code = getattr(e.response, 'status_code', 'N/A')
-                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {status_code}")
+                logging.error(f"Error details: {str(e)}")
                 results.append({
                     "prompt": prompt,
                     "error": str(e)
@@ -223,6 +219,73 @@ class LLMAnalyzer:
                 logging.error(f"{EMOJI_ERROR} Failed to save results: {e}")
         else:
             print(json.dumps(output_data, indent=4))
+
+    def process_image_for_module(self, image_path: str, prompts: List[str]) -> Dict[str, Any]:
+        logging.info(f"{EMOJI_PROCESSING} Processing image: {image_path}")
+        absolute_image_path = os.path.abspath(image_path)
+        
+        try:
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
+        except Exception as e:
+            logging.error(f"{EMOJI_ERROR} Unable to read image file. Error: {e}")
+            return {"error": str(e)}
+
+        results = []
+        has_error = False  # Flag to track if any prompt processing failed
+
+        for prompt in prompts:
+            prompt_details = PROMPTS.get(prompt, {})
+            prompt_text = prompt_details.get('PROMPT_TEXT', prompt)
+            temperature = float(prompt_details.get('TEMPERATURE', 0.7))
+            max_tokens = int(prompt_details.get('MAX_TOKENS', 1500))  # Increased max_tokens
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "model": self.model_name,
+                "messages": [
+                    {"role": "user", "content": prompt_text}
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            try:
+                logging.debug(f"Sending API request for prompt '{prompt}' to {self.api_url} with payload: {payload}")
+                response = requests.post(self.api_url, headers=headers, json=payload, timeout=Config.TIMEOUT)
+                response.raise_for_status()
+                logging.info(f"Response from API: {response.json()}")  # Log the entire response
+                results.append({
+                    "prompt": prompt,
+                    "result": response.json()
+                })
+            except requests.RequestException as e:
+                status_code = getattr(e.response, 'status_code', 'N/A')
+                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {status_code}")
+                logging.error(f"Error details: {str(e)}")
+                results.append({
+                    "prompt": prompt,
+                    "error": str(e)
+                })
+                has_error = True  # Set flag since an error occurred
+
+        output_data = {
+            "image": absolute_image_path,
+            "model": self.model_name,
+            "prompts": {
+                "results": results
+            }
+        }
+
+        if has_error:
+            logging.error(f"LLM analysis encountered errors for {image_path} with {self.title}. Not saving results.")
+            return {"error": "One or more prompts failed."}
+        else:
+            return output_data
 
 def list_models(models: List[Dict[str, Any]]):
     """
