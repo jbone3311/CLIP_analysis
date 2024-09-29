@@ -1,47 +1,47 @@
 {
     "prompts": {
         "best": {
-            "prompt": "painting of a woman walking in water with a waterfall in the background, fire and brimstone, steve henderson and mark brooks, radiating with power, but can only be burned, youtube thumbnail, dressed like jesus christ, glass ceilings, arson, female alive"
+            "prompt": "araffe wearing glasses and a red jacket sitting at a desk with a book, llama all the way, epic stock photo, lewandowski, inspired by Paul Emmert, he looks very sophisticated, compositing, streaming on twitch, high detailled, awww aspiring, algebra, childrens book, very refined, llama portrait"
         },
         "fast": {
-            "prompt": "painting of a woman walking in water with a waterfall in the background, flames surround her, walking out of flames, standing in fire, by Christophe Vacher, female ascending, woman made of black flames, energy flows of water and fire, appears as the fire goddess, by Magali Villeneuve, by Jon Foster, prophetic art, powerful painting"
+            "prompt": "araffe wearing glasses and a red jacket sitting at a desk with a book, lama, llama, llama anthro portrait, lama with dreadlocks, portrait of a llama, llama portrait, llama all the way, lorem ipsum dolor sit amet, studious, alpaca, librarian, scholar, scholarly, he looks very sophisticated, wearing reading glasses"
         }
     },
     "analysis": {
         "medium": {
-            "an oil on canvas painting": 0.1920166015625,
-            "a detailed painting": 0.189208984375,
-            "a fine art painting": 0.1885986328125,
-            "an oil painting": 0.1859130859375,
-            "a painting": 0.1826171875
+            "a stock photo": 0.1934814453125,
+            "computer graphics": 0.174560546875,
+            "a storybook illustration": 0.171142578125,
+            "a character portrait": 0.1710205078125,
+            "a computer rendering": 0.1695556640625
         },
         "artist": {
-            "by Christophe Vacher": 0.2335205078125,
-            "by Magali Villeneuve": 0.2293701171875,
-            "by Jon Foster": 0.2291259765625,
-            "by Donato Giancola": 0.224365234375,
-            "by Christopher Moeller": 0.2176513671875
+            "inspired by John Clayton": 0.1888427734375,
+            "inspired by Paul Bril": 0.186767578125,
+            "inspired by John Clayton Adams": 0.186279296875,
+            "inspired by Peter Benjamin Graham": 0.1861572265625,
+            "inspired by John Kay": 0.1842041015625
         },
         "movement": {
-            "metaphysical painting": 0.1995849609375,
-            "figurative art": 0.193359375,
-            "fantastic realism": 0.181884765625,
-            "context art": 0.1717529296875,
-            "fantasy art": 0.17138671875
+            "academic art": 0.1849365234375,
+            "verdadism": 0.1749267578125,
+            "figurativism": 0.1705322265625,
+            "furry art": 0.1695556640625,
+            "rayonism": 0.1663818359375
         },
         "trending": {
-            "trending on deviantart": 0.1651611328125,
-            "featured on deviantart": 0.1651611328125,
-            "deviantart": 0.163330078125,
-            "trending on pinterest": 0.1583251953125,
-            "Artstation": 0.1539306640625
+            "shutterstock contest winner": 0.1939697265625,
+            "shutterstock": 0.18212890625,
+            "featured on shutterstock": 0.1785888671875,
+            "trending on shutterstock": 0.1739501953125,
+            "behance": 0.172607421875
         },
         "flavor": {
-            "flames surround her": 0.238037109375,
-            "walking out of flames": 0.236083984375,
-            "standing in fire": 0.2333984375,
-            "female ascending": 0.23095703125,
-            "woman made of black flames": 0.23095703125
+            "lama": 0.256591796875,
+            "llama": 0.240478515625,
+            "llama anthro portrait": 0.239013671875,
+            "lama with dreadlocks": 0.2376708984375,
+            "portrait of a llama": 0.2371826171875
         }
     }
 }

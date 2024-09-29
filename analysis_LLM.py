@@ -3,15 +3,15 @@
 """
 LLMAnalyzer Standalone Script
 
-This script analyzes an image using a selected LLM (Language Model) API.
+This script analyzes an image or a directory of images using a selected LLM (Language Model) API.
 It accepts prompts directly or via prompt IDs defined in a LLM_Prompts.json file,
 sends requests to the API, and generates a JSON file with the results.
 
 Usage:
-    python analysis_LLM.py <image_path> --prompt <prompt1,prompt2,...> --model <model_number> [--output <output_file>] [--debug]
+    python analysis_LLM.py <image_path_or_directory> --prompt <prompt1,prompt2,...> --model <model_number> [--output <output_file>] [--debug]
 
 Arguments:
-    image_path: Path to the image file to be processed.
+    image_path_or_directory: Path to the image file or directory to be processed.
     --prompt: Comma-separated prompts or prompt IDs (e.g., 'PROMPT1,PROMPT2'). Use 'list' to display all prompts.
     --model: Model number for analysis (1-5) or 'list' to display all models.
     --output: Optional output file path for the JSON results.
@@ -19,6 +19,7 @@ Arguments:
 
 Example:
     python analysis_LLM.py test.png --prompt "PROMPT1,PROMPT2" --model 2 --output results.json
+    python analysis_LLM.py images/ --prompt "PROMPT1,PROMPT2" --model 2 --output results.json
 
 To list all available models:
     python analysis_LLM.py --model list
@@ -98,15 +99,15 @@ if not os.path.exists(PROMPTS_FILE):
     sample_prompts = {
         "PROMPT1": {
             "TITLE": "Detailed Image Description",
-            "PROMPT_TEXT": "You will be given an image to describe in detail. Your task is to provide a comprehensive and accurate description of the contents of the image.\n\nFollow these steps to describe the image:\n\n1. Begin by identifying the main subject or focus of the image. What immediately draws your attention?\n\n2. Describe the overall scene or setting. Is it indoors or outdoors? What time of day does it appear to be?\n\n3. Provide details about the main elements in the image, including:\n   - People: Describe their appearance, clothing, actions, and expressions\n   - Objects: Identify and describe key objects, their colors, sizes, and positions\n   - Animals: If present, describe their species, actions, and appearance\n   - Nature: Describe any natural elements like plants, trees, water bodies, or landscapes\n   - Buildings or structures: Describe their architecture, size, and condition\n\n4. Pay attention to colors, lighting, and atmosphere. How do these elements contribute to the overall mood or feel of the image?\n\n5. Describe any text or signage visible in the image.\n\n6. Note any unusual or striking features that stand out.\n\n7. If relevant, describe the composition of the image, including foreground, middle ground, and background elements.\n\n8. If the image depicts an action or event, describe what appears to be happening.\n\nProvide your description in clear, concise language. Be as objective as possible, focusing on what you can actually see rather than making assumptions or interpretations.\n\nIf any part of the image is unclear or difficult to discern, mention this in your description.\n\nIf for any reason you are unable to process or analyze the image, please state this clearly and explain why (e.g., \"I'm sorry, but I am unable to view or analyze the image provided.\").\n\nPresent your final description in detail so a blind person can see the image and an artist can paint it.",
+            "PROMPT_TEXT": "Describe the contents of the image accurately and thoroughly by following these steps:\n\n1. **Main Subject**: Identify the primary focus of the image. What immediately stands out?\n\n2. **Setting**: Describe whether the scene is indoors or outdoors and, if possible, estimate the time of day.\n\n3. **Details**: Expand on the key elements present in the image, covering:\n   - **People**: Mention their appearance, clothing, actions, and facial expressions.\n   - **Objects**: Identify significant objects, their positions, colors, and sizes.\n   - **Animals (if present)**: Describe the species, behavior, and appearance.\n   - **Natural Elements**: Note features like trees, plants, water, or landscapes.\n   - **Structures**: Describe buildings or other architectural elements, noting their style, size, and condition.\n\n4. **Colors and Lighting**: Describe the color palette and lighting in the image. Does it evoke a particular mood or atmosphere?\n\n5. **Text or Signage**: If there’s any visible text or signage, include it in your description.\n\n6. **Noteworthy Features**: Highlight any unusual or striking features that stand out.\n\n7. **Composition**: Comment on the composition, including elements in the foreground, middle ground, and background.\n\n8. **Actions or Events**: If the image shows any ongoing actions or events, describe what seems to be happening.\n\n9. **Clarity**: If any part of the image is unclear, mention this.\n\nProvide this description in clear, concise language that could be helpful for someone who cannot see the image. Focus solely on observable details without assumptions or interpretations.",
             "TEMPERATURE": 0.7,
-            "MAX_TOKENS": 1000
+            "MAX_TOKENS": 3000
         },
         "PROMPT2": {
             "TITLE": "Art Critique from Multiple Perspectives",
             "PROMPT_TEXT": "You are an art critic tasked with providing a comprehensive critique of an image from multiple perspectives. Your goal is to analyze the image visually, interpret its meaning, and describe how it appears and what it inspires from different viewpoints.\n\nExamine the image carefully and provide a critique from each of the following perspectives:\n\n1. Artist\n2. Gallery owner\n3. Curator\n4. 12-year-old\n5. 19-year-old\n6. 50-year-old\n\nFor each perspective, consider the following aspects:\n- Visual elements (composition, color, style, technique)\n- Emotional impact\n- Potential meaning or symbolism\n- How it relates to current trends or historical context (if applicable)\n- Personal interpretation based on the specific perspective\n\nStructure your response as follows:\n\n<critique>\n<artist_perspective>\n[Provide the artist's critique here]\n</artist_perspective>\n\n<gallery_owner_perspective>\n[Provide the gallery owner's critique here]\n</gallery_owner_perspective>\n\n<curator_perspective>\n[Provide the curator's critique here]\n</curator_perspective>\n\n<twelve_year_old_perspective>\n[Provide the 12-year-old's critique here]\n</twelve_year_old_perspective>\n\n<nineteen_year_old_perspective>\n[Provide the 19-year-old's critique here]\n</nineteen_year_old_perspective>\n\n<fifty_year_old_perspective>\n[Provide the 50-year-old's critique here]\n</fifty_year_old_perspective>\n</critique>\n\nEnsure that each perspective's critique is distinct and reflects the unique viewpoint of that particular role or age group. Be creative and insightful in your analysis, while remaining respectful and constructive in your critiques.",
             "TEMPERATURE": 0.8,
-            "MAX_TOKENS": 1500
+            "MAX_TOKENS": 2000
         }
     }
     with open(PROMPTS_FILE, 'w') as f:
@@ -135,19 +136,12 @@ def retry_request(func):
     return wrapper
 
 class LLMAnalyzer:
-    def __init__(self, api_url: str, api_key: str, model_name: str, title: str = "", debug: bool = False):
+    def __init__(self, api_url: str, api_key: str, model_name: str, title: str, debug: bool = False):
         self.api_url = api_url
         self.api_key = api_key
         self.model_name = model_name
         self.title = title
         self.debug = debug
-        if self.debug:
-            logging.debug(f"{EMOJI_INFO} LLMAnalyzer initialized with model '{model_name}' and title '{title}'")
-
-    @staticmethod
-    def save_json(data, file_path):
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=4)
 
     @retry_request
     def process_image(self, image_path: str, prompts: List[str], output_file: Optional[str] = None):
@@ -197,6 +191,7 @@ class LLMAnalyzer:
                     "result": response.json()
                 })
             except requests.RequestException as e:
+                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {getattr(e.response, 'status_code', 'N/A')}")
                 logging.error(f"Error details: {str(e)}")
                 results.append({
                     "prompt": prompt,
@@ -210,7 +205,7 @@ class LLMAnalyzer:
                 "results": results
             }
         }
-        
+
         if output_file:
             try:
                 self.save_json(output_data, output_file)
@@ -220,72 +215,9 @@ class LLMAnalyzer:
         else:
             print(json.dumps(output_data, indent=4))
 
-    def process_image_for_module(self, image_path: str, prompts: List[str]) -> Dict[str, Any]:
-        logging.info(f"{EMOJI_PROCESSING} Processing image: {image_path}")
-        absolute_image_path = os.path.abspath(image_path)
-        
-        try:
-            with open(image_path, "rb") as image_file:
-                image_data = base64.b64encode(image_file.read()).decode("utf-8")
-        except Exception as e:
-            logging.error(f"{EMOJI_ERROR} Unable to read image file. Error: {e}")
-            return {"error": str(e)}
-
-        results = []
-        has_error = False  # Flag to track if any prompt processing failed
-
-        for prompt in prompts:
-            prompt_details = PROMPTS.get(prompt, {})
-            prompt_text = prompt_details.get('PROMPT_TEXT', prompt)
-            temperature = float(prompt_details.get('TEMPERATURE', 0.7))
-            max_tokens = int(prompt_details.get('MAX_TOKENS', 1500))  # Increased max_tokens
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            payload = {
-                "model": self.model_name,
-                "messages": [
-                    {"role": "user", "content": prompt_text}
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            }
-            
-            try:
-                logging.debug(f"Sending API request for prompt '{prompt}' to {self.api_url} with payload: {payload}")
-                response = requests.post(self.api_url, headers=headers, json=payload, timeout=Config.TIMEOUT)
-                response.raise_for_status()
-                logging.info(f"Response from API: {response.json()}")  # Log the entire response
-                results.append({
-                    "prompt": prompt,
-                    "result": response.json()
-                })
-            except requests.RequestException as e:
-                status_code = getattr(e.response, 'status_code', 'N/A')
-                logging.error(f"{EMOJI_ERROR} Failed to process prompt '{prompt}'. Status code: {status_code}")
-                logging.error(f"Error details: {str(e)}")
-                results.append({
-                    "prompt": prompt,
-                    "error": str(e)
-                })
-                has_error = True  # Set flag since an error occurred
-
-        output_data = {
-            "image": absolute_image_path,
-            "model": self.model_name,
-            "prompts": {
-                "results": results
-            }
-        }
-
-        if has_error:
-            logging.error(f"LLM analysis encountered errors for {image_path} with {self.title}. Not saving results.")
-            return {"error": "One or more prompts failed."}
-        else:
-            return output_data
+    def save_json(self, data: Dict[str, Any], output_file: str):
+        with open(output_file, 'w') as f:
+            json.dump(data, f, indent=4)
 
 def list_models(models: List[Dict[str, Any]]):
     """
@@ -324,13 +256,13 @@ def parse_arguments() -> argparse.Namespace:
         argparse.Namespace: Parsed arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Analyze an image using a selected LLM (Language Model) API and generate a JSON file with the results."
+        description="Analyze an image or a directory of images using a selected LLM (Language Model) API and generate a JSON file with the results."
     )
     parser.add_argument(
-        "image_path",
+        "image_path_or_directory",
         type=str,
         nargs='?',
-        help="Path to the image file to be processed."
+        help="Path to the image file or directory to be processed."
     )
     parser.add_argument(
         "--prompt",
@@ -378,8 +310,8 @@ def main():
         sys.exit(0)
     
     # Ensure required arguments are provided for analysis
-    if not args.image_path or not args.prompt or not args.model:
-        logging.error(f"{EMOJI_ERROR} Missing required arguments: image_path, --prompt, --model")
+    if not args.image_path_or_directory or not args.prompt or not args.model:
+        logging.error(f"{EMOJI_ERROR} Missing required arguments: image_path_or_directory, --prompt, --model")
         sys.exit(1)
     
     # Validate and retrieve model configuration
@@ -388,7 +320,7 @@ def main():
         # Check if model_number exists in MODELS
         model_config = next((model for model in MODELS if model['number'] == model_number), None)
         if not model_config:
-            logging.error(f"{EMOJI_ERROR} Invalid model number: {model_number}. Use '--model list' to see available models.")
+            logging.error(f"{EMOJI_ERROR} Invalid model number: {args.model}. Use '--model list' to see available models.")
             sys.exit(1)
     except ValueError:
         logging.error(f"{EMOJI_ERROR} Invalid model value: {args.model}. It should be an integer between 1 and {len(MODELS)} or 'list'.")
@@ -412,7 +344,7 @@ def main():
         logging.error(f"{EMOJI_ERROR} No valid prompts provided.")
         sys.exit(1)
     
-    analyzer.process_image(args.image_path, prompts, args.output)
-    
+    analyzer.process_image(args.image_path_or_directory, prompts, args.output)
+
 if __name__ == "__main__":
     main()
