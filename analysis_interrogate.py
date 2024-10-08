@@ -89,19 +89,37 @@ def analyze_image(image_path: str, api_base_url: str, model: str, timeout: int =
         logging.error(f"{EMOJI_ERROR} Failed to analyze image. Error: {e}")
         return {"error": str(e)}
 
-def process_image(image_path: str, api_base_url: str, model: str, modes: List[str]) -> Dict[str, Any]:
-    logging.debug(f"Processing image: {image_path}")
-    results = {
-        "prompts": prompt_image(image_path, api_base_url, model, modes),
-        "analysis": analyze_image(image_path, api_base_url, model)
-    }
+def process_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], output_file: str = None) -> str:
+    try:
+        # Perform prompt generation
+        prompt_results = prompt_image(image_path, api_base_url, model, modes)
 
-    # Check for errors in results
-    if 'error' in results['prompts'] or 'error' in results['analysis']:
-        logging.error(f"Errors encountered during processing of {image_path}: {results}")
-        return {"error": "Processing failed due to errors in prompts or analysis."}
+        # Perform image analysis
+        analysis_results = analyze_image(image_path, api_base_url, model)
 
-    return results
+        # Collect all results and metadata
+        output_data = {
+            "model": model,
+            "modes": modes,
+            "file_directory": os.path.dirname(image_path),
+            "file_name": os.path.basename(image_path),
+            "prompt_results": prompt_results,
+            "analysis_results": analysis_results
+        }
+
+        # Save results to JSON if output_file is specified
+        if output_file:
+            with open(output_file, 'w') as f:
+                json.dump(output_data, f, indent=4)
+            logging.info(f"Saved output to {output_file}")
+        else:
+            return json.dumps(output_data, indent=4)
+
+        return "SUCCESS: Analysis Completed"
+
+    except Exception as e:
+        logging.error(f"ERROR: Analysis Failed due to {str(e)}")
+        return "ERROR: Analysis Failed"
 
 def save_json(data: Dict[str, Any], filename: str):
     with open(filename, 'w') as f:
@@ -117,27 +135,11 @@ def main():
     parser.add_argument("--output", type=str, default="output.json", help="Output JSON file.")
     args = parser.parse_args()
 
-    image_path = args.image_path
-    api_base_url = args.api_base_url
-    model = args.model
-    modes = args.modes
-    output_filename = args.output
-
-    # Verify that the image file exists
-    if not os.path.isfile(image_path):
-        print(f"{EMOJI_ERROR} Image file '{image_path}' not found.")
-        return
-
-    results = process_image(image_path, api_base_url, model, modes)
-
-    # Save results to JSON
-    try:
-        save_json(results, output_filename)
-    except Exception as e:
-        print(f"{EMOJI_ERROR} Failed to save results: {e}")
+    result = process_image_with_clip(args.image_path, args.api_base_url, args.model, args.modes, args.output)
+    print(result)
 
 if __name__ == "__main__":
     main()
 else:
     # This ensures process_image is available when the module is imported
-    __all__ = ['process_image']
+    __all__ = ['process_image_with_clip']

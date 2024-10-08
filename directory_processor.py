@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 from typing import List, Dict, Any
 from requests.exceptions import RequestException
+from PIL import Image
 
 import analysis_interrogate
 from analysis_LLM import LLMAnalyzer, MODELS, PROMPTS
@@ -30,8 +31,8 @@ MAX_RETRIES = int(os.getenv('MAX_RETRIES', 3))
 RETRY_DELAY = int(os.getenv('RETRY_DELAY', 5))  # seconds
 
 class DirectoryProcessor:
-    def __init__(self):
-        self.config = self.load_config()
+    def __init__(self, config):
+        self.config = config
         self.llm_analyzers = self.setup_llm_analyzers() if self.config['ENABLE_LLM_ANALYSIS'] else []
         logging.info("DirectoryProcessor initialized with config: %s", self.config)
         logging.debug(f"Imported process_image function: {analysis_interrogate.process_image}")
@@ -55,7 +56,8 @@ class DirectoryProcessor:
     def setup_llm_analyzers(self) -> List[LLMAnalyzer]:
         analyzers = []
         for model in MODELS:
-            if model.get('enabled', False):  # Use get() to provide a default value
+            enabled = os.getenv(f"ENABLE_LLM_{model['number']}", 'False').lower() == 'true'
+            if enabled:
                 analyzer = LLMAnalyzer(
                     api_url=model['api_url'],
                     api_key=model['api_key'],
@@ -74,10 +76,10 @@ class DirectoryProcessor:
 
         if self.config['ENABLE_PARALLEL_PROCESSING']:
             with ThreadPoolExecutor() as executor:
-                executor.map(self.process_image, image_files)
+                executor.map(lambda image_file: self.process_image(image_file, self.config['CLIP_MODES']), image_files)
         else:
             for image_file in image_files:
-                self.process_image(image_file)
+                self.process_image(image_file, self.config['CLIP_MODES'])
 
     def find_image_files(self, directory: str) -> List[str]:
         image_files = []
@@ -87,67 +89,74 @@ class DirectoryProcessor:
                     image_files.append(os.path.join(root, file))
         return image_files
 
-    def process_image(self, image_file: str):
+    def process_image(self, image_file: str, modes: List[str]):
         start_time = time.time()
         try:
             logging.info(f"Processing image: {image_file}")
-            absolute_path = os.path.abspath(image_file)
-            logging.debug(f"Absolute path: {absolute_path}")
-            file_size = os.path.getsize(image_file)
-            logging.debug(f"File size of {image_file}: {file_size} bytes")
+            absolute_image_path = os.path.abspath(image_file)
+            logging.debug(f"Absolute path: {absolute_image_path}")
 
-            # Process image metadata
-            metadata = image_metadata.extract_metadata(image_file)
-            metadata_output_file = os.path.join(self.config['OUTPUT_DIRECTORY'], os.path.basename(image_file).replace('.', '_DATA.json'))
-            self.save_results(metadata, metadata_output_file, result_type='metadata')
-            logging.info(f"Saved metadata to {metadata_output_file}")
+            # Define the output paths for the metadata JSON files
+            metadata_output_path = os.path.join(self.config['OUTPUT_DIRECTORY'], f"{os.path.splitext(os.path.basename(image_file))[0]}_DATA.json")
+            llm_output_path = os.path.join(self.config['OUTPUT_DIRECTORY'], f"{os.path.splitext(os.path.basename(image_file))[0]}_LLM.json")
+            clip_output_path = os.path.join(self.config['OUTPUT_DIRECTORY'], f"{os.path.splitext(os.path.basename(image_file))[0]}_CLIP.json")
 
-            # Process image with CLIP
-            if self.config['ENABLE_CLIP_ANALYSIS']:
-                clip_results = analysis_interrogate.process_image(image_file, self.config['CLIP_MODEL_NAME'], self.config['CLIP_MODES'])
-                clip_output_file = os.path.join(self.config['OUTPUT_DIRECTORY'], os.path.basename(image_file).replace('.', '_CLIP.json'))
-                self.save_results(clip_results, clip_output_file, result_type='CLIP')
-                logging.info(f"CLIP analysis completed successfully for {image_file}")
+            # Skip processing if the JSON files already exist
+            if os.path.exists(metadata_output_path) and os.path.exists(llm_output_path) and os.path.exists(clip_output_path):
+                logging.info(f"Skipping {image_file} as all output files already exist.")
+                return
 
-            # Process image with LLM
+            # Process metadata
+            metadata = image_metadata.extract_metadata(absolute_image_path)
+
+            # Process LLM analysis
+            llm_results = None
             if self.config['ENABLE_LLM_ANALYSIS']:
                 for analyzer in self.llm_analyzers:
-                    try:
-                        prompts = list(PROMPTS.keys())
-                        results = analyzer.process_image(image_file, prompts)
-                        logging.debug(f"LLM results for {image_file}: {results}")
+                    logging.info(f"Running LLM analysis with {analyzer.model_name}")
+                    llm_results = analyzer.process_image(absolute_image_path, self.config['CLIP_MODES'])
+                    logging.debug(f"LLM results: {llm_results}")
 
-                        if results and 'choices' in results:
-                            llm_data = {
-                                **metadata,
-                                **results
-                            }
-                            llm_output_file = os.path.join(self.config['OUTPUT_DIRECTORY'], os.path.basename(image_file).replace('.', '_LLM.json'))
-                            self.save_results(llm_data, llm_output_file, result_type='LLM')
-                            logging.info(f"LLM analysis completed successfully for {image_file}")
-                        else:
-                            logging.warning(f"No valid results to save for LLM analysis of {image_file}: {results}")
-                    except Exception as e:
-                        logging.error(f"Error during LLM analysis for {image_file}: {e}")
+            # Process CLIP analysis
+            clip_results = None
+            if self.config['ENABLE_CLIP_ANALYSIS']:
+                clip_results = analysis_interrogate.process_image(absolute_image_path, self.config['API_BASE_URL'], self.config['CLIP_MODEL_NAME'], modes)
+
+            # Save results
+            if metadata:
+                with open(metadata_output_path, 'w') as f:
+                    json.dump(metadata, f, indent=4)
+                logging.info(f"Saved metadata results to {metadata_output_path}")
+
+            if llm_results:
+                with open(llm_output_path, 'w') as f:
+                    json.dump(llm_results, f, indent=4)
+                logging.info(f"Saved LLM results to {llm_output_path}")
+
+            if clip_results:
+                with open(clip_output_path, 'w') as f:
+                    json.dump(clip_results, f, indent=4)
+                logging.info(f"Saved CLIP results to {clip_output_path}")
+
         except Exception as e:
             logging.error(f"Failed to process image {image_file}: {e}")
-        end_time = time.time()
-        logging.info(f"Processing time for {image_file}: {end_time - start_time:.2f} seconds")
-
-    def save_results(self, results: Dict[str, Any], filename: str, result_type: str):
-        try:
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            logging.debug(f"Saving {result_type} results to {filename} with data: {results}")
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(results, f, indent=4)
-            logging.info(f"Saved {result_type} results to {filename}")
-        except TypeError as e:
-            logging.error(f"TypeError while saving {result_type} results to {filename}: {e}")
-            logging.debug(f"Data that caused TypeError: {results}")
-        except Exception as e:
-            logging.error(f"Failed to save {result_type} results to {filename}: {e}")
-            logging.debug(f"Data that caused the error: {results}")
+        finally:
+            end_time = time.time()
+            logging.info(f"Processing time for {image_file}: {end_time - start_time:.2f} seconds")
 
 if __name__ == "__main__":
-    processor = DirectoryProcessor()
+    # Load configuration
+    config = {
+        'API_BASE_URL': 'http://localhost:7860',
+        'CLIP_MODEL_NAME': 'ViT-L-14/openai',
+        'ENABLE_CLIP_ANALYSIS': True,
+        'ENABLE_LLM_ANALYSIS': True,
+        'ENABLE_PARALLEL_PROCESSING': False,
+        'IMAGE_DIRECTORY': 'Images',
+        'OUTPUT_DIRECTORY': 'Output',
+        'CLIP_MODES': ['caption', 'fast'],
+        'USE_JSON': True
+    }
+
+    processor = DirectoryProcessor(config)
     processor.process_directory()
