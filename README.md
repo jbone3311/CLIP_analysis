@@ -1,132 +1,233 @@
-# Image Analysis with CLIP and LLM
+# Dual-Mode Image Analysis Tool
 
-This project provides a comprehensive solution for analyzing images using CLIP (Contrastive Language-Image Pre-training) and LLM (Large Language Model) technologies. It processes images in a specified directory, performs various analyses, and saves the results in JSON format.
+A comprehensive Python-based image analysis solution that combines the power of Large Language Models (LLMs) and CLIP Interrogator technology to provide detailed image analysis, descriptions, and prompt generation.
 
-## Features
+## 🚀 Features
 
-- Analyzes images using CLIP in multiple modes (caption, best, fast, classic, negative)
-- Processes images with LLM using customizable prompts
-- Supports batch processing of images in a directory and its subdirectories
-- Implements retry mechanism with exponential backoff for API calls
-- Saves analysis results in JSON format for each image
-- Generates wildcard text files from existing JSON results
-- Implements logging for debugging and monitoring
-- Efficiently manages previously processed images to avoid redundant analysis
+### Dual Analysis Modes
+- **LLM Analysis**: Uses various LLM APIs (GPT-4, Claude, etc.) for detailed image descriptions and creative interpretations
+- **CLIP Interrogator Analysis**: Leverages CLIP models for caption generation and prompt creation in multiple modes
 
-## Main Components
+### Key Capabilities
+- **Batch Processing**: Process entire directories of images recursively
+- **Multiple LLM Support**: Configure up to 5 different LLM providers/models
+- **CLIP Modes**: Support for `best`, `fast`, `classic`, `negative`, and `caption` analysis modes
+- **Flexible Storage**: JSON file output with optional database storage
+- **Smart Duplicate Detection**: Avoid reprocessing with file hash comparison
+- **Configurable Prompts**: Customizable analysis prompts via JSON configuration
+- **Retry Mechanisms**: Built-in retry logic with exponential backoff
+- **Comprehensive Logging**: Detailed logging with configurable emoji status indicators
 
-[... previous component list ...]
+## 📁 Project Structure
 
-## How It Works
+```
+├── analysis_LLM.py          # LLM-based image analysis engine
+├── analysis_interrogate.py  # CLIP Interrogator analysis engine
+├── directory_processor.py   # Batch processing for image directories
+├── config.py               # Configuration management
+├── db_utils.py            # Database utilities for tracking processed images
+├── utils.py               # Helper functions and utilities
+├── LLM_Prompts.json       # Configurable LLM analysis prompts
+├── .env                   # Environment configuration (create from .env copy)
+└── README.md             # This file
+```
 
-1. The application scans the specified image directory and its subdirectories for image files.
-2. For each image, it checks if a corresponding JSON file already exists.
-3. If a JSON file exists, it determines which analysis modes need to be run based on the existing data.
-4. The application then performs the required analyses using CLIP and/or LLM.
-5. Results are saved in JSON format, either creating a new file or updating an existing one.
-6. After processing all images, it generates wildcard text files from the existing JSON results.
+## 🛠️ Installation
 
-## Efficient Processing with JSON Files
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
 
-The application uses JSON files to keep track of processed images and their analysis results. This approach offers several benefits:
+2. **Install dependencies**
+   ```bash
+   pip install requests python-dotenv argparse
+   ```
 
-1. **Avoiding Redundant Processing**: Before analyzing an image, the system checks for an existing JSON file with the same name as the image (plus the analyzer name). If found, it reads the file to determine which analysis modes have already been performed.
+3. **Configure environment**
+   ```bash
+   cp ".env copy" .env
+   # Edit .env with your API keys and settings
+   ```
 
-2. **Incremental Updates**: If new analysis modes are enabled or if only some modes were previously processed, the system will only perform the missing analyses. This saves time and computational resources by not repeating work that's already been done.
+## ⚙️ Configuration
 
-3. **File Integrity Checking**: The system generates a unique hash for each image file. When an existing JSON file is found, the current image's hash is compared with the stored hash. If they don't match, it indicates the image has been modified, and the system will reprocess the image entirely.
+### Environment Variables
 
-4. **Flexible Result Storage**: The JSON structure allows for storing results from multiple analysis modes and even multiple models for the same mode. This flexibility enables easy comparison and aggregation of results.
+Configure the tool via the `.env` file:
 
-5. **Wildcard Generation**: After processing, the system scans all JSON files to generate wildcard text files. These files contain aggregated results for each analysis mode, which can be useful for various downstream tasks or quick overviews of the analysis results.
+#### LLM Configuration (up to 5 models)
+```env
+LLM_1_TITLE=GPT-4 Vision
+LLM_1_API_URL=https://api.openai.com/v1/chat/completions
+LLM_1_API_KEY=your_openai_api_key
+LLM_1_MODEL=gpt-4-vision-preview
 
-## JSON File Structure
+LLM_2_TITLE=Claude 3 Vision
+LLM_2_API_URL=https://api.anthropic.com/v1/messages
+LLM_2_API_KEY=your_anthropic_api_key
+LLM_2_MODEL=claude-3-opus-20240229
+```
 
-Each JSON file contains:
+#### CLIP Interrogator Configuration
+```env
+API_BASE_URL=http://localhost:7860
+CLIP_MODEL_NAME=ViT-L-14/openai
+```
 
-- `file_info`: Metadata about the image file (filename, unique hash, creation date, processing date, file size)
-- `analysis`: A dictionary of analysis results, with keys for each processed mode
+#### Processing Settings
+```env
+IMAGE_DIRECTORY=Images
+OUTPUT_DIRECTORY=Output
+ENABLE_LLM_ANALYSIS=true
+ENABLE_CLIP_ANALYSIS=true
+ENABLE_CAPTION=true
+ENABLE_BEST=true
+ENABLE_FAST=true
+ENABLE_CLASSIC=true
+ENABLE_NEGATIVE=true
+```
 
-Example:
+#### Storage Options
+```env
+USE_JSON=true
+USE_DATABASE=false
+DATABASE_PATH=image_analysis.db
+```
 
-CLIP and LLM Image Analysis Software Specification
-1. Overview
-This software is designed to perform advanced image analysis using CLIP (Contrastive Language-Image Pre-training) and LLM (Large Language Model) technologies. It processes batches of images, generates descriptive captions, and creates prompt lists for various AI applications.
-2. Core Features
-2.1 Image Processing
-Supports multiple image formats (PNG, JPG, JPEG)
-Batch processing of images from specified directories
-Unique file hashing for image identification
-2.2 CLIP Analysis
-Utilizes OpenAI's CLIP model for image-text matching
-Generates descriptive captions for images
-Supports multiple analysis modes (e.g., best, caption, classic, fast, negative)
-2.3 LLM Analysis
-Integrates with large language models (e.g., GPT-4) for advanced text generation
-Produces detailed descriptions and creative prompts based on image content
-2.4 Result Management
-Saves analysis results in JSON format
-Creates individual JSON files for each processed image
-Option to generate consolidated TXT files with prompts (wildcards)
-2.5 Incremental Processing
-Checks for existing JSON files to avoid redundant processing
-Supports updating existing analysis with new modes or models
-3. Technical Specifications
-3.1 Architecture
-Modular design with separate analyzers (CLIP and LLM)
-Utilizes abstract base classes for extensibility
-3.2 Configuration
-Configurable via environment variables or config files
-Supports enabling/disabling specific analysis types (CLIP, LLM)
-Customizable API endpoints and model selections
-3.3 Error Handling and Logging
-Comprehensive error logging system
-Graceful error handling to prevent system crashes
-Detailed logging of processing steps and results
-3.4 Performance
-Asynchronous processing capabilities
-Efficient file I/O operations
-Optimized for handling large batches of images
-4. Input/Output
-4.1 Input
-Directory path containing image files
-Configuration settings (API keys, model preferences, etc.)
-4.2 Output
-JSON files containing analysis results for each image
-Optional TXT files with consolidated prompts (wildcards)
-Detailed log files of processing activities
-5. Integration and APIs
-5.1 CLIP API Integration
-Connects to OpenAI's CLIP API or local CLIP models
-Customizable prompts and analysis modes
-5.2 LLM API Integration
-Supports integration with various LLM APIs (e.g., OpenAI GPT, Anthropic Claude)
-Configurable API endpoints and request parameters
-6. Security and Compliance
-6.1 Data Handling
-Local processing of images (no upload to external servers unless using cloud APIs)
-Secure handling of API keys and sensitive configuration data
-6.2 Privacy
-No retention of original images after processing
-Option to anonymize or encrypt output data
-7. Scalability and Future Enhancements
-7.1 Scalability
-Designed to handle increasing volumes of images
-Potential for distributed processing across multiple machines
-7.2 Extensibility
-Easy integration of new analysis models or APIs
-Modular architecture allows for adding new features without major refactoring
-8. User Interface
-8.1 Command-Line Interface
-Simple CLI for initiating batch processing
-Options for specifying input directories and configuration settings
-8.2 Potential GUI (Future Enhancement)
-User-friendly interface for non-technical users
-Visual representation of processing progress and results
-9. Documentation and Support
-9.1 User Manual
-Comprehensive guide on installation, configuration, and usage
-Troubleshooting section for common issues
-9.2 API Documentation
-Detailed documentation of internal APIs for developers
-Guidelines for extending or modifying the software
+## 🚀 Usage
+
+### Single Image Analysis
+
+#### LLM Analysis
+```bash
+python analysis_LLM.py image.jpg --prompt "PROMPT1,PROMPT2" --model 1 --output results.json
+```
+
+#### CLIP Interrogator Analysis
+```bash
+python analysis_interrogate.py image.jpg --modes best fast classic --output output.json
+```
+
+### Batch Directory Processing
+```bash
+python directory_processor.py
+```
+
+### Available Commands
+
+#### List Available Models
+```bash
+python analysis_LLM.py --model list
+```
+
+#### List Available Prompts
+```bash
+python analysis_LLM.py --prompt list
+```
+
+## 📊 Output Format
+
+### JSON Structure
+Each processed image generates a JSON file with the following structure:
+
+```json
+{
+    "image": "/absolute/path/to/image.jpg",
+    "model": "gpt-4-vision-preview",
+    "prompts": {
+        "results": [
+            {
+                "prompt": "PROMPT1",
+                "result": {
+                    "choices": [...],
+                    "usage": {...}
+                }
+            }
+        ]
+    },
+    "analysis": {
+        "best": "Generated prompt...",
+        "fast": "Quick description...",
+        "classic": "Classic style prompt...",
+        "negative": "Negative prompt...",
+        "caption": "Image caption..."
+    }
+}
+```
+
+## 🎯 Analysis Modes
+
+### LLM Prompts (Configurable via LLM_Prompts.json)
+
+1. **PROMPT1**: Detailed Image Description
+   - Comprehensive visual analysis
+   - Objective descriptions for accessibility
+   - Temperature: 0.7, Max Tokens: 1000
+
+2. **PROMPT2**: Art Critique from Multiple Perspectives
+   - Analysis from 6 different viewpoints (Artist, Gallery Owner, Curator, 12-year-old, 19-year-old, 50-year-old)
+   - Creative interpretations and emotional responses
+   - Temperature: 0.8, Max Tokens: 1500
+
+### CLIP Interrogator Modes
+
+- **best**: Highest quality prompt generation
+- **fast**: Quick prompt generation
+- **classic**: Traditional style prompts
+- **negative**: Negative prompts for AI art generation
+- **caption**: Simple image captions
+
+## 🔧 Advanced Features
+
+### Smart Processing
+- **File Hash Comparison**: Automatically detects if images have been modified
+- **Incremental Processing**: Only runs missing analysis modes
+- **Error Handling**: Graceful error recovery with detailed logging
+
+### Database Support
+- Optional SQLite database for tracking processed images
+- Status tracking (processing, completed, failed)
+- Prevents duplicate processing across sessions
+
+### Logging and Monitoring
+- Configurable emoji status indicators
+- Detailed error reporting
+- API conversation logging (optional)
+
+## 🛡️ Error Handling
+
+The tool includes comprehensive error handling:
+- Automatic retry with exponential backoff
+- Graceful API failure recovery
+- Detailed error logging
+- Processing status tracking
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+[Add your license information here]
+
+## 🆘 Support
+
+For issues and questions:
+1. Check the logs for detailed error messages
+2. Verify your API keys and endpoints
+3. Ensure required dependencies are installed
+4. Create an issue in the repository
+
+## 🔮 Future Enhancements
+
+- Web-based user interface
+- Additional LLM provider support
+- Batch prompt customization
+- Result aggregation and comparison tools
+- Export formats (CSV, XML, etc.)
