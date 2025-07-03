@@ -17,7 +17,7 @@ ENABLE_NEGATIVE=False
 # LLM Settingsu
 ENABLE_LLM_ANALYSIS=True
 # Prompt Settings
-PROMPT_CHOICES=1
+PROMPT_CHOICES=P1,P2
 
 # LLM Settings
 ENABLE_LLM_1=True
@@ -28,7 +28,7 @@ ENABLE_LLM_5=False
 
 LLM_1_TITLE=GPT-4o
 LLM_1_API_URL=https://api.openai.com/v1/chat/completions
-LLM_1_API_KEY=sk-Yhv3ZxpW_8hXOb3GMJGd7A2PjpUgBWvgj0A
+LLM_1_API_KEY=sk-Yhv3ZxbirMJGd7AgBWvgj0A
 LLM_1_MODEL=gpt-4o
 
 LLM_2_TITLE=ollama  
@@ -56,7 +56,6 @@ ENABLE_JSON_PROCESSING=True
 IMAGE_DIRECTORY=Images
 OUTPUT_DIRECTORY=Output
 LOGGING_LEVEL=DEBUG
-LOG_API_CONVERSATION=True
 RETRY_LIMIT=5
 
 # Duplicate Detection Settings

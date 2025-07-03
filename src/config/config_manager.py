@@ -1,0 +1,394 @@
+#!/usr/bin/env python3
+"""
+Configuration Helper for Image Analysis with CLIP and LLM
+
+This script helps users set up and validate their configuration for the image analysis system.
+It provides an interactive way to configure API keys, models, and other settings.
+"""
+
+import os
+import json
+import sys
+from pathlib import Path
+from typing import Dict, Any, List
+import requests
+
+def print_banner():
+    """Print the application banner"""
+    print("🖼️  Image Analysis Configuration Helper")
+    print("=" * 50)
+    print()
+
+def get_user_input(prompt: str, default: str = "", required: bool = True) -> str:
+    """Get user input with validation"""
+    while True:
+        if default:
+            user_input = input(f"{prompt} [{default}]: ").strip()
+            if not user_input:
+                user_input = default
+        else:
+            user_input = input(f"{prompt}: ").strip()
+        
+        if not user_input and required:
+            print("❌ This field is required. Please enter a value.")
+            continue
+        
+        return user_input
+
+def get_yes_no(prompt: str, default: bool = True) -> bool:
+    """Get yes/no input from user"""
+    default_str = "Y" if default else "N"
+    while True:
+        response = input(f"{prompt} (Y/N) [{default_str}]: ").strip().upper()
+        if not response:
+            response = default_str
+        
+        if response in ['Y', 'YES']:
+            return True
+        elif response in ['N', 'NO']:
+            return False
+        else:
+            print("❌ Please enter Y or N.")
+
+def test_api_connection(api_url: str, api_key: str = None) -> bool:
+    """Test if an API endpoint is reachable"""
+    try:
+        headers = {}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        
+        response = requests.get(api_url, headers=headers, timeout=10)
+        return response.status_code < 500  # Consider 4xx as reachable but auth issue
+    except Exception:
+        return False
+
+def validate_clip_api(api_url: str) -> Dict[str, Any]:
+    """Validate CLIP API connection"""
+    print(f"🔍 Testing CLIP API connection to {api_url}...")
+    
+    if not test_api_connection(api_url):
+        return {
+            "valid": False,
+            "message": f"Cannot connect to CLIP API at {api_url}"
+        }
+    
+    # Test the specific endpoints
+    try:
+        # Test the analyze endpoint
+        test_payload = {
+            "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",  # 1x1 pixel
+            "model": "ViT-L-14/openai",
+            "modes": ["fast"]
+        }
+        
+        response = requests.post(
+            f"{api_url}/interrogator/analyze",
+            json=test_payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return {
+                "valid": True,
+                "message": "CLIP API is working correctly"
+            }
+        else:
+            return {
+                "valid": False,
+                "message": f"CLIP API returned status {response.status_code}"
+            }
+            
+    except Exception as e:
+        return {
+            "valid": False,
+            "message": f"CLIP API test failed: {str(e)}"
+        }
+
+def validate_llm_api(api_url: str, api_key: str, model_name: str) -> Dict[str, Any]:
+    """Validate LLM API connection"""
+    print(f"🤖 Testing LLM API connection to {api_url}...")
+    
+    if not test_api_connection(api_url, api_key):
+        return {
+            "valid": False,
+            "message": f"Cannot connect to LLM API at {api_url}"
+        }
+    
+    # Test with a simple request
+    try:
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        test_payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "Hello"}],
+            "max_tokens": 10
+        }
+        
+        response = requests.post(api_url, headers=headers, json=test_payload, timeout=30)
+        
+        if response.status_code == 200:
+            return {
+                "valid": True,
+                "message": "LLM API is working correctly"
+            }
+        elif response.status_code == 401:
+            return {
+                "valid": False,
+                "message": "Invalid API key"
+            }
+        else:
+            return {
+                "valid": False,
+                "message": f"LLM API returned status {response.status_code}"
+            }
+            
+    except Exception as e:
+        return {
+            "valid": False,
+            "message": f"LLM API test failed: {str(e)}"
+        }
+
+def create_env_file(config: Dict[str, Any]) -> bool:
+    """Create or update the .env file"""
+    env_content = f"""# Image Analysis Configuration
+# Generated by config_helper.py
+
+# Processing Settings
+ENABLE_PARALLEL_PROCESSING={str(config.get('ENABLE_PARALLEL_PROCESSING', False)).lower()}
+ENABLE_METADATA_EXTRACTION={str(config.get('ENABLE_METADATA_EXTRACTION', True)).lower()}
+FORCE_REPROCESS={str(config.get('FORCE_REPROCESS', False)).lower()}
+GENERATE_SUMMARIES={str(config.get('GENERATE_SUMMARIES', True)).lower()}
+
+# API Configuration
+API_BASE_URL={config.get('API_BASE_URL', 'http://localhost:7860')}
+
+# CLIP Interrogator Settings
+CLIP_MODEL_NAME={config.get('CLIP_MODEL_NAME', 'ViT-L-14/openai')}
+ENABLE_CLIP_ANALYSIS={str(config.get('ENABLE_CLIP_ANALYSIS', True)).lower()}
+CLIP_MODES={','.join(config.get('CLIP_MODES', ['best', 'fast']))}
+
+# LLM Settings
+ENABLE_LLM_ANALYSIS={str(config.get('ENABLE_LLM_ANALYSIS', True)).lower()}
+PROMPT_CHOICES={','.join(config.get('PROMPT_CHOICES', ['P1', 'P2']))}
+
+# LLM Model Configurations
+"""
+    
+    # Add LLM model configurations
+    for i, model in enumerate(config.get('LLM_MODELS', []), 1):
+        env_content += f"""
+ENABLE_LLM_{i}={str(model.get('enabled', False)).lower()}
+LLM_{i}_TITLE={model.get('title', f'LLM {i}')}
+LLM_{i}_API_URL={model.get('api_url', '')}
+LLM_{i}_API_KEY={model.get('api_key', '')}
+LLM_{i}_MODEL={model.get('model_name', '')}
+"""
+    
+    env_content += f"""
+# General Settings
+IMAGE_DIRECTORY={config.get('IMAGE_DIRECTORY', 'Images')}
+OUTPUT_DIRECTORY={config.get('OUTPUT_DIRECTORY', 'Output')}
+LOGGING_LEVEL={config.get('LOGGING_LEVEL', 'INFO')}
+RETRY_LIMIT={config.get('RETRY_LIMIT', 5)}
+TIMEOUT={config.get('TIMEOUT', 60)}
+
+# Status Messages
+EMOJI_SUCCESS=✅
+EMOJI_WARNING=⚠️
+EMOJI_ERROR=❌
+EMOJI_INFO=ℹ️
+EMOJI_PROCESSING=🔄
+EMOJI_START=🚀
+EMOJI_COMPLETE=🎉
+"""
+    
+    try:
+        with open('.env', 'w') as f:
+            f.write(env_content)
+        return True
+    except Exception as e:
+        print(f"❌ Failed to create .env file: {e}")
+        return False
+
+def setup_clip_config() -> Dict[str, Any]:
+    """Setup CLIP configuration"""
+    print("\n🔍 CLIP Configuration")
+    print("-" * 20)
+    
+    api_url = get_user_input("CLIP API Base URL", "http://localhost:7860")
+    model_name = get_user_input("CLIP Model Name", "ViT-L-14/openai")
+    
+    print("\nAvailable CLIP modes: best, fast, classic, negative, caption")
+    modes_input = get_user_input("CLIP Modes (comma-separated)", "best,fast")
+    modes = [mode.strip() for mode in modes_input.split(',')]
+    
+    enable_clip = get_yes_no("Enable CLIP Analysis", True)
+    
+    # Test the configuration
+    if enable_clip:
+        validation = validate_clip_api(api_url)
+        if validation["valid"]:
+            print(f"✅ {validation['message']}")
+        else:
+            print(f"❌ {validation['message']}")
+            if not get_yes_no("Continue anyway", False):
+                return setup_clip_config()
+    
+    return {
+        "API_BASE_URL": api_url,
+        "CLIP_MODEL_NAME": model_name,
+        "CLIP_MODES": modes,
+        "ENABLE_CLIP_ANALYSIS": enable_clip
+    }
+
+def setup_llm_config() -> List[Dict[str, Any]]:
+    """Setup LLM configuration"""
+    print("\n🤖 LLM Configuration")
+    print("-" * 20)
+    
+    enable_llm = get_yes_no("Enable LLM Analysis", True)
+    if not enable_llm:
+        return []
+    
+    models = []
+    model_count = 0
+    
+    while True:
+        model_count += 1
+        print(f"\n--- LLM Model {model_count} ---")
+        
+        title = get_user_input(f"Model {model_count} Title", f"LLM {model_count}")
+        api_url = get_user_input(f"Model {model_count} API URL")
+        api_key = get_user_input(f"Model {model_count} API Key")
+        model_name = get_user_input(f"Model {model_count} Name")
+        
+        enabled = get_yes_no(f"Enable Model {model_count}", True)
+        
+        model_config = {
+            "title": title,
+            "api_url": api_url,
+            "api_key": api_key,
+            "model_name": model_name,
+            "enabled": enabled
+        }
+        
+        # Test the configuration if enabled
+        if enabled and api_url and api_key:
+            validation = validate_llm_api(api_url, api_key, model_name)
+            if validation["valid"]:
+                print(f"✅ {validation['message']}")
+            else:
+                print(f"❌ {validation['message']}")
+                if not get_yes_no("Continue anyway", False):
+                    continue
+        
+        models.append(model_config)
+        
+        if not get_yes_no("Add another LLM model", False):
+            break
+    
+    return models
+
+def setup_prompts() -> List[str]:
+    """Setup prompt configuration"""
+    print("\n📝 Prompt Configuration")
+    print("-" * 20)
+    
+    print("Available prompts:")
+    print("  P1: Detailed Image Description")
+    print("  P2: Art Critique from Multiple Perspectives")
+    
+    prompts_input = get_user_input("Select prompts (comma-separated)", "P1,P2")
+    return [prompt.strip() for prompt in prompts_input.split(',')]
+
+def setup_directories() -> Dict[str, str]:
+    """Setup directory configuration"""
+    print("\n📁 Directory Configuration")
+    print("-" * 20)
+    
+    image_dir = get_user_input("Image Directory", "Images")
+    output_dir = get_user_input("Output Directory", "Output")
+    
+    # Create directories if they don't exist
+    for directory in [image_dir, output_dir]:
+        if not os.path.exists(directory):
+            try:
+                os.makedirs(directory)
+                print(f"✅ Created directory: {directory}")
+            except Exception as e:
+                print(f"❌ Failed to create directory {directory}: {e}")
+    
+    return {
+        "IMAGE_DIRECTORY": image_dir,
+        "OUTPUT_DIRECTORY": output_dir
+    }
+
+def setup_processing_options() -> Dict[str, Any]:
+    """Setup processing options"""
+    print("\n⚙️  Processing Options")
+    print("-" * 20)
+    
+    parallel = get_yes_no("Enable Parallel Processing", False)
+    metadata = get_yes_no("Enable Metadata Extraction", True)
+    summaries = get_yes_no("Generate Summary Files", True)
+    
+    logging_level = get_user_input("Logging Level", "INFO")
+    retry_limit = int(get_user_input("Retry Limit", "5"))
+    timeout = int(get_user_input("API Timeout (seconds)", "60"))
+    
+    return {
+        "ENABLE_PARALLEL_PROCESSING": parallel,
+        "ENABLE_METADATA_EXTRACTION": metadata,
+        "GENERATE_SUMMARIES": summaries,
+        "LOGGING_LEVEL": logging_level,
+        "RETRY_LIMIT": retry_limit,
+        "TIMEOUT": timeout
+    }
+
+def main():
+    """Main configuration setup"""
+    print_banner()
+    
+    print("This helper will guide you through setting up your image analysis configuration.")
+    print("You can skip any section by pressing Enter to use defaults.\n")
+    
+    # Collect all configuration
+    config = {}
+    
+    # Setup directories
+    config.update(setup_directories())
+    
+    # Setup CLIP configuration
+    config.update(setup_clip_config())
+    
+    # Setup LLM configuration
+    config['LLM_MODELS'] = setup_llm_config()
+    
+    # Setup prompts
+    config['PROMPT_CHOICES'] = setup_prompts()
+    
+    # Setup processing options
+    config.update(setup_processing_options())
+    
+    # Create the .env file
+    print("\n💾 Saving Configuration")
+    print("-" * 20)
+    
+    if create_env_file(config):
+        print("✅ Configuration saved to .env file")
+        print("\n🎉 Setup complete! You can now run the image analysis system.")
+        print("\nNext steps:")
+        print("1. Place your images in the 'Images' directory")
+        print("2. Run: python directory_processor.py")
+        print("3. Check the 'Output' directory for results")
+    else:
+        print("❌ Failed to save configuration")
+        return 1
+    
+    return 0
+
+if __name__ == "__main__":
+    exit(main()) 
