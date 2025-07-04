@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - Image Analysis{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-3">
+            <i class="fas fa-cog me-2"></i>
+            Configuration
+        </h1>
+        <p class="text-muted">Manage your image analysis system settings and preferences.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Configuration Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-sliders-h me-2"></i>
+                    System Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="configForm">
+                    <!-- General Settings -->
+                    <h6 class="mb-3">
+                        <i class="fas fa-cog me-2"></i>
+                        General Settings
+                    </h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="imageDirectory" class="form-label">Image Directory</label>
+                            <input type="text" class="form-control" id="imageDirectory" 
+                                   value="{{ config.IMAGE_DIRECTORY }}" name="IMAGE_DIRECTORY">
+                            <div class="form-text">Directory where images are stored</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="outputDirectory" class="form-label">Output Directory</label>
+                            <input type="text" class="form-control" id="outputDirectory" 
+                                   value="{{ config.OUTPUT_DIRECTORY }}" name="OUTPUT_DIRECTORY">
+                            <div class="form-text">Directory where results are saved</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analysis Settings -->
+                    <h6 class="mb-3">
+                        <i class="fas fa-microscope me-2"></i>
+                        Analysis Settings
+                    </h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableClipAnalysis" 
+                                       name="ENABLE_CLIP_ANALYSIS" 
+                                       {% if config.ENABLE_CLIP_ANALYSIS %}checked{% endif %}>
+                                <label class="form-check-label" for="enableClipAnalysis">
+                                    Enable CLIP Analysis
+                                </label>
+                            </div>
+                            <div class="form-text">Enable visual understanding with CLIP</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableLlmAnalysis" 
+                                       name="ENABLE_LLM_ANALYSIS" 
+                                       {% if config.ENABLE_LLM_ANALYSIS %}checked{% endif %}>
+                                <label class="form-check-label" for="enableLlmAnalysis">
+                                    Enable LLM Analysis
+                                </label>
+                            </div>
+                            <div class="form-text">Enable detailed analysis with language models</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableMetadataExtraction" 
+                                       name="ENABLE_METADATA_EXTRACTION" 
+                                       {% if config.ENABLE_METADATA_EXTRACTION %}checked{% endif %}>
+                                <label class="form-check-label" for="enableMetadataExtraction">
+                                    Enable Metadata Extraction
+                                </label>
+                            </div>
+                            <div class="form-text">Extract technical image information</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableParallelProcessing" 
+                                       name="ENABLE_PARALLEL_PROCESSING" 
+                                       {% if config.ENABLE_PARALLEL_PROCESSING %}checked{% endif %}>
+                                <label class="form-check-label" for="enableParallelProcessing">
+                                    Enable Parallel Processing
+                                </label>
+                            </div>
+                            <div class="form-text">Process multiple images simultaneously</div>
+                        </div>
+                    </div>
+                    
+                    <!-- CLIP Settings -->
+                    <h6 class="mb-3">
+                        <i class="fas fa-eye me-2"></i>
+                        CLIP Settings
+                    </h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="clipApiUrl" class="form-label">CLIP API URL</label>
+                            <input type="text" class="form-control" id="clipApiUrl" 
+                                   value="{{ config.API_BASE_URL }}" name="API_BASE_URL">
+                            <div class="form-text">URL for CLIP analysis service</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="clipModelName" class="form-label">CLIP Model</label>
+                            <select class="form-select" id="clipModelName" name="CLIP_MODEL_NAME">
+                                <option value="ViT-L-14/openai" {% if config.CLIP_MODEL_NAME == 'ViT-L-14/openai' %}selected{% endif %}>
+                                    ViT-L-14/openai
+                                </option>
+                                <option value="ViT-B-32/openai" {% if config.CLIP_MODEL_NAME == 'ViT-B-32/openai' %}selected{% endif %}>
+                                    ViT-B-32/openai
+                                </option>
+                                <option value="ViT-B-16/openai" {% if config.CLIP_MODEL_NAME == 'ViT-B-16/openai' %}selected{% endif %}>
+                                    ViT-B-16/openai
+                                </option>
+                            </select>
+                            <div class="form-text">CLIP model to use for analysis</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Processing Options -->
+                    <h6 class="mb-3">
+                        <i class="fas fa-tools me-2"></i>
+                        Processing Options
+                    </h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="forceReprocess" 
+                                       name="FORCE_REPROCESS" 
+                                       {% if config.FORCE_REPROCESS %}checked{% endif %}>
+                                <label class="form-check-label" for="forceReprocess">
+                                    Force Reprocess
+                                </label>
+                            </div>
+                            <div class="form-text">Reprocess images even if already analyzed</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="generateSummaries" 
+                                       name="GENERATE_SUMMARIES" 
+                                       {% if config.GENERATE_SUMMARIES %}checked{% endif %}>
+                                <label class="form-check-label" for="generateSummaries">
+                                    Generate Summaries
+                                </label>
+                            </div>
+                            <div class="form-text">Create summary files after processing</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="debugMode" 
+                                       name="DEBUG" 
+                                       {% if config.DEBUG %}checked{% endif %}>
+                                <label class="form-check-label" for="debugMode">
+                                    Debug Mode
+                                </label>
+                            </div>
+                            <div class="form-text">Enable detailed logging and debugging</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Save Button -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-secondary me-md-2" onclick="resetForm()">
+                            <i class="fas fa-undo me-2"></i>
+                            Reset
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Configuration Info -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Configuration Help
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>General Settings</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <strong>Image Directory:</strong> Where your images are stored
+                    </li>
+                    <li class="mb-2">
+                        <strong>Output Directory:</strong> Where analysis results are saved
+                    </li>
+                </ul>
+                
+                <h6>Analysis Types</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <strong>CLIP:</strong> Visual understanding and classification
+                    </li>
+                    <li class="mb-2">
+                        <strong>LLM:</strong> Detailed description and interpretation
+                    </li>
+                    <li class="mb-2">
+                        <strong>Metadata:</strong> Technical image information
+                    </li>
+                </ul>
+                
+                <h6>Processing Options</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <strong>Parallel:</strong> Process multiple images at once
+                    </li>
+                    <li class="mb-2">
+                        <strong>Force Reprocess:</strong> Re-analyze existing images
+                    </li>
+                    <li class="mb-2">
+                        <strong>Debug:</strong> Enable detailed logging
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('upload') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>
+                        Upload Images
+                    </a>
+                    <a href="{{ url_for('process') }}" class="btn btn-outline-success">
+                        <i class="fas fa-cogs me-2"></i>
+                        Process Images
+                    </a>
+                    <a href="{{ url_for('results') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Results
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const configForm = document.getElementById('configForm');
+    
+    // Handle form submission
+    configForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const formData = new FormData(configForm);
+        const configData = {};
+        
+        // Handle checkboxes and other form elements
+        for (let [key, value] of formData.entries()) {
+            if (key.includes('ENABLE_') || key === 'FORCE_REPROCESS' || key === 'GENERATE_SUMMARIES' || key === 'DEBUG') {
+                configData[key] = true;
+            } else {
+                configData[key] = value;
+            }
+        }
+        
+        // Handle checkboxes that might not be checked
+        const checkboxes = configForm.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                configData[checkbox.name] = false;
+            }
+        });
+        
+        // Send configuration update
+        fetch('/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(configData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    Configuration saved successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                configForm.insertBefore(alert, configForm.firstChild);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alert.remove();
+                }, 3000);
+            } else {
+                throw new Error(data.message || 'Failed to save configuration');
+            }
+        })
+        .catch(error => {
+            // Show error message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error saving configuration: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            configForm.insertBefore(alert, configForm.firstChild);
+        });
+    });
+});
+
+// Reset form to original values
+function resetForm() {
+    if (confirm('Are you sure you want to reset all settings to their original values?')) {
+        location.reload();
+    }
+}
+</script>
+{% endblock %} 

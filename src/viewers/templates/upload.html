@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Images - Image Analysis{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-3">
+            <i class="fas fa-upload me-2"></i>
+            Upload Images
+        </h1>
+        <p class="text-muted">Upload images for analysis. You can drag and drop files or use the file picker.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Upload Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Upload Files
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drag and drop images here</h5>
+                        <p class="text-muted">or</p>
+                        <input type="file" name="file" multiple accept="image/*" class="form-control" id="fileInput" style="display: none;">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open me-2"></i>
+                            Choose Files
+                        </button>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP<br>
+                                Maximum file size: 50MB
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div id="fileList" class="mt-3" style="display: none;">
+                        <h6>Selected Files:</h6>
+                        <div id="fileItems"></div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="subfolder" class="form-label">Subfolder (optional)</label>
+                            <input type="text" class="form-control" id="subfolder" name="subfolder" 
+                                   placeholder="e.g., vacation, work, etc.">
+                            <div class="form-text">Create a subfolder to organize your images</div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-success w-100" id="uploadBtn" disabled>
+                                <i class="fas fa-upload me-2"></i>
+                                Upload Files
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Upload Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Upload Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use high-quality images for better analysis
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Organize images in subfolders for better management
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Maximum file size: 50MB per file
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        You can upload multiple files at once
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('images') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-images me-2"></i>
+                        View All Images
+                    </a>
+                    <a href="{{ url_for('process') }}" class="btn btn-outline-success">
+                        <i class="fas fa-cogs me-2"></i>
+                        Process Images
+                    </a>
+                    <a href="{{ url_for('results') }}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Results
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const fileItems = document.getElementById('fileItems');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files.length > 0) {
+            displayFileList(files);
+            uploadBtn.disabled = false;
+        } else {
+            fileList.style.display = 'none';
+            uploadBtn.disabled = true;
+        }
+    });
+    
+    // Display selected files
+    function displayFileList(files) {
+        fileItems.innerHTML = '';
+        fileList.style.display = 'block';
+        
+        Array.from(files).forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'd-flex justify-content-between align-items-center p-2 border rounded mb-2';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.innerHTML = `
+                <div><strong>${file.name}</strong></div>
+                <small class="text-muted">${formatFileSize(file.size)}</small>
+            `;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-outline-danger';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.onclick = function() {
+                // Create new FileList without this file
+                const dt = new DataTransfer();
+                Array.from(files).forEach((f, i) => {
+                    if (i !== index) dt.items.add(f);
+                });
+                fileInput.files = dt.files;
+                
+                if (dt.files.length === 0) {
+                    fileList.style.display = 'none';
+                    uploadBtn.disabled = true;
+                } else {
+                    displayFileList(dt.files);
+                }
+            };
+            
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeBtn);
+            fileItems.appendChild(fileItem);
+        });
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Handle form submission
+    uploadForm.addEventListener('submit', function(e) {
+        const files = fileInput.files;
+        if (files.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one file to upload.');
+            return;
+        }
+        
+        // Show loading state
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+    });
+    
+    // Drag and drop functionality
+    const uploadArea = document.getElementById('uploadArea');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight(e) {
+        uploadArea.classList.add('dragover');
+    }
+    
+    function unhighlight(e) {
+        uploadArea.classList.remove('dragover');
+    }
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = files;
+            displayFileList(files);
+            uploadBtn.disabled = false;
+        }
+    }
+});
+</script>
+{% endblock %} 

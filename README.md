@@ -6,6 +6,7 @@ A comprehensive image analysis system that combines CLIP (Contrastive Language-I
 
 - **🔍 CLIP Analysis**: Multi-mode image analysis using CLIP interrogator
 - **🤖 LLM Analysis**: Advanced text generation using multiple LLM models
+- **🌐 Web Interface**: Modern web application for easy image upload and result viewing
 - **📊 Unified Data Structure**: Consistent JSON format for all analysis results
 - **⚡ Incremental Processing**: Smart processing that only analyzes new or changed images
 - **📈 Progress Tracking**: Real-time progress bars and status updates
@@ -16,6 +17,32 @@ A comprehensive image analysis system that combines CLIP (Contrastive Language-I
 - **🛡️ Error Handling**: Comprehensive error handling with retry mechanisms
 
 ## 🚀 Quick Start
+
+### Option 1: Web Interface (Recommended - Default)
+
+Simply run the application without any arguments to launch the web interface:
+
+```bash
+python main.py
+```
+
+This will:
+- Start the web server automatically
+- Open your browser to `http://localhost:5000`
+- Allow you to upload images via drag-and-drop
+- Start processing with one click
+- View results in a beautiful interface
+- Download analysis files
+
+### Option 2: Command Line Interface
+
+For command-line usage, use the help menu:
+
+```bash
+python main.py --help
+```
+
+This will show an interactive menu with all available options.
 
 ### 1. Setup Configuration
 
@@ -43,6 +70,20 @@ Place your images in the `Images` directory (or your configured image directory)
 
 ### 3. Run Analysis
 
+#### Option A: Web Interface (Recommended)
+Start the web interface for an easy-to-use graphical interface:
+
+```bash
+python main.py web
+```
+
+Then open your browser to `http://localhost:5000` and:
+- Upload images via drag-and-drop
+- Start processing with one click
+- View results in a beautiful interface
+- Download analysis files
+
+#### Option B: Command Line
 ```bash
 python main.py process
 ```
@@ -55,6 +96,14 @@ python directory_processor.py
 
 ### 4. View Results
 
+#### Option A: Web Interface
+Navigate to the Results page in the web interface for:
+- Interactive filtering and search
+- Quick preview of analysis results
+- Download individual or bulk results
+- Visual status indicators
+
+#### Option B: Command Line
 ```bash
 # List all analysis files
 python main.py view --list
@@ -79,6 +128,35 @@ python src/viewers/results_viewer.py --list
 python src/viewers/results_viewer.py --file Output/image_analysis.json
 ```
 
+## 🌐 Web Interface
+
+The web interface provides a modern, user-friendly way to interact with the image analysis system:
+
+### Features
+- **📤 Drag & Drop Upload**: Easy image upload with support for multiple files
+- **📊 Real-time Dashboard**: Monitor system status and recent activity
+- **🔍 Interactive Results**: Search, filter, and explore analysis results
+- **⚙️ Configuration Management**: Web-based settings configuration
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
+- **🔄 Background Processing**: Start processing and continue browsing
+- **🌐 Auto Browser Opening**: Browser opens automatically when you start the web interface
+
+### Getting Started
+1. Start the web interface: `python main.py` (default) or `python main.py web`
+2. Your browser will open automatically to `http://localhost:5000`
+3. Upload images using the Upload page
+4. Start processing from the Process page
+5. View results in the Results page
+6. Configure settings in the Config page
+
+### Web Interface Pages
+- **Dashboard**: Overview of system status and recent activity
+- **Upload**: Drag-and-drop image upload with folder organization
+- **Images**: Browse and manage uploaded images
+- **Process**: Start and monitor image processing
+- **Results**: View, search, and download analysis results
+- **Config**: Manage system configuration settings
+
 ## 📁 Project Structure
 
 ```
@@ -95,7 +173,17 @@ GIT_CLIP_Analysis/
 │   │   └── config_manager.py
 │   ├── viewers/             # Results viewing tools
 │   │   ├── __init__.py
-│   │   └── results_viewer.py
+│   │   ├── results_viewer.py    # Command-line viewer
+│   │   ├── web_interface.py     # Flask web application
+│   │   └── templates/           # HTML templates
+│   │       ├── base.html
+│   │       ├── dashboard.html
+│   │       ├── upload.html
+│   │       ├── results.html
+│   │       ├── process.html
+│   │       ├── config.html
+│   │       ├── images.html
+│   │       └── result_detail.html
 │   └── utils/               # Utility functions
 │       ├── __init__.py
 │       └── installer.py
