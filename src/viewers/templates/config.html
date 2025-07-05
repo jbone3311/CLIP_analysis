@@ -31,17 +31,23 @@
                         General Settings
                     </h6>
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="imageDirectory" class="form-label">Image Directory</label>
                             <input type="text" class="form-control" id="imageDirectory" 
                                    value="{{ config.IMAGE_DIRECTORY }}" name="IMAGE_DIRECTORY">
                             <div class="form-text">Directory where images are stored</div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="outputDirectory" class="form-label">Output Directory</label>
                             <input type="text" class="form-control" id="outputDirectory" 
                                    value="{{ config.OUTPUT_DIRECTORY }}" name="OUTPUT_DIRECTORY">
                             <div class="form-text">Directory where results are saved</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="webPort" class="form-label">Web Port</label>
+                            <input type="number" class="form-control" id="webPort" 
+                                   value="{{ config.WEB_PORT }}" name="WEB_PORT" min="1024" max="65535">
+                            <div class="form-text">Port for the web interface (default: 5050)</div>
                         </div>
                     </div>
                     

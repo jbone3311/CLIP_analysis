@@ -118,7 +118,8 @@ def start_web_interface():
         from src.viewers.web_interface import app, open_browser
         import threading
         
-        print("🌐 Web interface starting at http://localhost:5000")
+        web_port = int(os.getenv('WEB_PORT', '5050'))
+        print(f"🚀 Server starting at http://localhost:{web_port}")
         print("📱 Browser will open automatically...")
         print("⏹️  Press Ctrl+C to stop the web server")
         print()
@@ -128,7 +129,7 @@ def start_web_interface():
         browser_thread.daemon = True
         browser_thread.start()
         
-        app.run(debug=False, host='0.0.0.0', port=5000)
+        app.run(debug=False, host='0.0.0.0', port=web_port)
     except ImportError as e:
         print(f"❌ Error importing web interface: {e}")
         print("💡 Make sure Flask is installed: pip install Flask")

@@ -28,7 +28,7 @@ python main.py
 
 This will:
 - Start the web server automatically
-- Open your browser to `http://localhost:5000`
+- Open your browser to `http://localhost:5050`
 - Allow you to upload images via drag-and-drop
 - Start processing with one click
 - View results in a beautiful interface
@@ -44,7 +44,28 @@ python main.py --help
 
 This will show an interactive menu with all available options.
 
-### 1. Setup Configuration
+## ⚙️ Configuration
+
+The system uses environment variables for configuration. You can set these in a `.env` file or through the web interface.
+
+### Environment Variables
+
+#### Web Interface Settings
+- `WEB_PORT`: Port for the web interface (default: 5050)
+- `IMAGE_DIRECTORY`: Directory for uploaded images (default: Images)
+- `OUTPUT_DIRECTORY`: Directory for analysis results (default: Output)
+
+#### API Settings
+- `API_BASE_URL`: URL for CLIP analysis service (default: http://localhost:7860)
+- `CLIP_MODEL_NAME`: CLIP model to use (default: ViT-L-14/openai)
+
+#### Analysis Settings
+- `ENABLE_CLIP_ANALYSIS`: Enable CLIP analysis (default: True)
+- `ENABLE_LLM_ANALYSIS`: Enable LLM analysis (default: True)
+- `CLIP_MODES`: Comma-separated list of CLIP modes (default: best,fast)
+- `PROMPT_CHOICES`: Comma-separated list of prompt choices (default: P1,P2)
+
+### Setup Configuration
 
 Run the interactive configuration helper:
 
@@ -77,7 +98,7 @@ Start the web interface for an easy-to-use graphical interface:
 python main.py web
 ```
 
-Then open your browser to `http://localhost:5000` and:
+Then open your browser to `http://localhost:5050` and:
 - Upload images via drag-and-drop
 - Start processing with one click
 - View results in a beautiful interface
@@ -143,7 +164,7 @@ The web interface provides a modern, user-friendly way to interact with the imag
 
 ### Getting Started
 1. Start the web interface: `python main.py` (default) or `python main.py web`
-2. Your browser will open automatically to `http://localhost:5000`
+2. Your browser will open automatically to `http://localhost:5050` (configurable via `WEB_PORT` environment variable)
 3. Upload images using the Upload page
 4. Start processing from the Process page
 5. View results in the Results page

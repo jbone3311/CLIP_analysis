@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from src.analyzers.clip_analyzer import analyze_image_with_clip
 from src.analyzers.llm_analyzer import analyze_image_with_llm, MODELS
 from src.analyzers.metadata_extractor import extract_metadata
+from src.database.db_manager import DatabaseManager
 import requests
 from datetime import datetime
 from pathlib import Path
@@ -178,6 +179,9 @@ class DirectoryProcessor:
         self.llm_models = self.setup_llm_models() if self.config['ENABLE_LLM_ANALYSIS'] else []
         self.config['llm_models'] = self.llm_models  # Add to config for reference
         
+        # Initialize database manager
+        self.db_manager = DatabaseManager()
+        
         # Validate configuration
         self._validate_config()
         
@@ -185,6 +189,7 @@ class DirectoryProcessor:
         logging.debug(f"CLIP Analysis Enabled: {self.config['ENABLE_CLIP_ANALYSIS']}")
         logging.debug(f"LLM Analysis Enabled: {self.config['ENABLE_LLM_ANALYSIS']}")
         logging.debug(f"Available LLM Models: {[m['title'] for m in self.llm_models]}")
+        logging.info("Database integration enabled")
 
     def _validate_config(self):
         """Validate configuration and provide helpful error messages"""
@@ -285,6 +290,18 @@ class DirectoryProcessor:
                     logging.error(f"Failed to process {image_file}: {e}")
                     progress.update(False)
 
+    def _compute_md5(self, file_path: str) -> str:
+        """Compute MD5 hash of a file"""
+        hash_md5 = hashlib.md5()
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except Exception as e:
+            logging.error(f"Failed to compute MD5 for {file_path}: {e}")
+            return "unknown"
+
     def find_image_files(self, directory: str) -> List[str]:
         """Find all image files in directory and subdirectories"""
         image_files = []
@@ -306,10 +323,18 @@ class DirectoryProcessor:
         try:
             logging.info(f"Processing image: {image_file}")
             
-            # Check for existing analysis
+            # Check for existing analysis in database first
+            image_md5 = self._compute_md5(image_file)
+            if not self.config.get('FORCE_REPROCESS', False):
+                existing_db_result = self.db_manager.get_result_by_md5(image_md5)
+                if existing_db_result:
+                    logging.info(f"Skipping {image_file} - analysis already exists in database")
+                    return True
+            
+            # Check for existing analysis in files
             existing_result = self._load_existing_analysis(image_file)
             if existing_result and not self.config.get('FORCE_REPROCESS', False):
-                logging.info(f"Skipping {image_file} - analysis already exists")
+                logging.info(f"Skipping {image_file} - analysis already exists in files")
                 return True
             
             # Create unified analysis result
@@ -330,7 +355,8 @@ class DirectoryProcessor:
                         image_path=image_file,
                         api_base_url=self.config['API_BASE_URL'],
                         model=self.config['CLIP_MODEL_NAME'],
-                        modes=self.config['CLIP_MODES']
+                        modes=self.config['CLIP_MODES'],
+                        force_reprocess=self.config.get('FORCE_REPROCESS', False)
                     )
                     analysis_result.add_clip_result(clip_result)
                 except Exception as e:

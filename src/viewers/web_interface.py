@@ -27,6 +27,7 @@ import base64
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from directory_processor import DirectoryProcessor
+from src.database.db_manager import DatabaseManager
 from dotenv import load_dotenv
 import os
 
@@ -41,6 +42,7 @@ UPLOAD_FOLDER = 'Images'
 OUTPUT_FOLDER = 'Output'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'webp'}
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
+WEB_PORT = int(os.getenv('WEB_PORT', '5050'))
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
@@ -48,6 +50,9 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 # Global variables
 processing_status = {}
 processing_threads = {}
+
+# Initialize database manager
+db_manager = DatabaseManager()
 
 def get_config():
     """Get current configuration from environment variables"""
@@ -62,7 +67,8 @@ def get_config():
         'PROMPT_CHOICES': os.getenv('PROMPT_CHOICES', 'P1,P2').split(','),
         'LOGGING_LEVEL': os.getenv('LOGGING_LEVEL', 'INFO'),
         'RETRY_LIMIT': int(os.getenv('RETRY_LIMIT', '5')),
-        'TIMEOUT': int(os.getenv('TIMEOUT', '60'))
+        'TIMEOUT': int(os.getenv('TIMEOUT', '60')),
+        'WEB_PORT': int(os.getenv('WEB_PORT', '5050'))
     }
 
 def update_config(config_data):
@@ -233,11 +239,11 @@ def open_browser():
     """Open browser after a short delay"""
     time.sleep(1.5)  # Wait for server to start
     try:
-        webbrowser.open('http://localhost:5000')
+        webbrowser.open(f'http://localhost:{WEB_PORT}')
         print("🌐 Browser opened automatically!")
     except Exception as e:
         print(f"⚠️  Could not open browser automatically: {e}")
-        print("📱 Please open your browser and navigate to: http://localhost:5000")
+        print(f"📱 Please open your browser and navigate to: http://localhost:{WEB_PORT}")
 
 @app.route('/')
 def index():
@@ -398,6 +404,57 @@ def api_analysis(filename):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/database')
+def database_browser():
+    """Database browser page"""
+    try:
+        # Get all results from database
+        results = db_manager.get_all_results()
+        
+        # Process results for display
+        processed_results = []
+        for result in results:
+            # Generate thumbnail if possible
+            thumbnail_url = None
+            image_path = os.path.join(result['directory'], result['filename'])
+            if os.path.exists(image_path):
+                thumbnail_url = get_thumbnail_data_url(image_path)
+            
+            processed_results.append({
+                'id': result['id'],
+                'filename': result['filename'],
+                'directory': result['directory'],
+                'md5': result['md5'],
+                'model': result['model'],
+                'modes': json.loads(result['modes']) if result['modes'] else [],
+                'date_added': result['date_added'],
+                'thumbnail': thumbnail_url,
+                'has_prompts': bool(result['prompts']),
+                'has_analysis': bool(result['analysis_results'])
+            })
+        
+        return render_template('database.html', results=processed_results)
+    except Exception as e:
+        flash(f'Error loading database: {e}', 'error')
+        return render_template('database.html', results=[])
+
+@app.route('/api/database/result/<int:result_id>')
+def api_database_result(result_id):
+    """API endpoint to get database result by ID"""
+    try:
+        result = db_manager.get_result_by_id(result_id)
+        if result:
+            # Parse JSON fields
+            result['modes'] = json.loads(result['modes']) if result['modes'] else []
+            result['prompts'] = json.loads(result['prompts']) if result['prompts'] else {}
+            result['analysis_results'] = json.loads(result['analysis_results']) if result['analysis_results'] else {}
+            result['settings'] = json.loads(result['settings']) if result['settings'] else {}
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Result not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Create necessary directories
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -406,11 +463,11 @@ if __name__ == '__main__':
     print("🌐 Starting Web Interface...")
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Output folder: {OUTPUT_FOLDER}")
-    print("🚀 Server starting at http://localhost:5000")
+    print(f"🚀 Server starting at http://localhost:{WEB_PORT}")
     
     # Start browser opening in background thread
     browser_thread = threading.Thread(target=open_browser)
     browser_thread.daemon = True
     browser_thread.start()
     
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=WEB_PORT) 
