@@ -63,8 +63,15 @@
                              data-filename="{{ image.filename|lower }}"
                              data-folder="{{ image.path.split('/')[0] if '/' in image.path else '' }}">
                             <div class="card h-100">
-                                <div class="card-img-top bg-light text-center p-3" style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-image fa-4x text-muted"></i>
+                                <div class="card-img-top" style="height: 200px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                    {% if image.thumbnail %}
+                                        <img src="{{ image.thumbnail }}" alt="{{ image.filename }}" 
+                                             class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light text-center p-3 w-100 h-100 d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-image fa-4x text-muted"></i>
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="card-body">
                                     <h6 class="card-title text-truncate" title="{{ image.filename }}">

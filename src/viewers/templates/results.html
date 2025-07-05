@@ -90,7 +90,12 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="me-3">
-                                                <i class="fas fa-image fa-2x text-muted"></i>
+                                                {% if analysis.thumbnail %}
+                                                    <img src="{{ analysis.thumbnail }}" alt="{{ analysis.original_image }}" 
+                                                         class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                                {% else %}
+                                                    <i class="fas fa-image fa-2x text-muted"></i>
+                                                {% endif %}
                                             </div>
                                             <div>
                                                 <strong>{{ analysis.original_image }}</strong>

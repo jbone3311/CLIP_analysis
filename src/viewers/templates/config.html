@@ -312,10 +312,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert.className = 'alert alert-success alert-dismissible fade show';
                 alert.innerHTML = `
                     <i class="fas fa-check-circle me-2"></i>
-                    Configuration saved successfully!
+                    ${data.message || 'Configuration saved successfully!'}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
                 configForm.insertBefore(alert, configForm.firstChild);
+                
+                // Close any open modals
+                const modals = document.querySelectorAll('.modal.show');
+                modals.forEach(modal => {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                });
                 
                 // Auto-dismiss after 3 seconds
                 setTimeout(() => {
