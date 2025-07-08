@@ -1,0 +1,59 @@
+# =============================================================================
+# SECURE CONFIGURATION - API Keys and Sensitive Data Only
+# =============================================================================
+# Copy this file to .env and add your actual API keys
+# cp secure_env_example.txt .env
+# 
+# WARNING: Never commit .env to version control!
+# This file contains sensitive API keys and secrets.
+
+# =============================================================================
+# API Keys - Add your actual keys here
+# =============================================================================
+
+# OpenAI API Key
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic API Key  
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Google API Key
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Grok (xAI) API Key
+GROK_API_KEY=your_grok_api_key_here
+
+# Cohere API Key
+COHERE_API_KEY=your_cohere_api_key_here
+
+# Mistral API Key
+MISTRAL_API_KEY=your_mistral_api_key_here
+
+# Perplexity API Key
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
+
+# =============================================================================
+# Database Configuration (Sensitive)
+# =============================================================================
+# SQLite database file path
+DATABASE_PATH=image_analysis.db
+
+# =============================================================================
+# Security Configuration (Sensitive)
+# =============================================================================
+# Secret key for Flask sessions (change this in production!)
+FLASK_SECRET_KEY=your-secret-key-here-change-this-in-production
+
+# =============================================================================
+# API URLs (usually don't need to change)
+# =============================================================================
+OPENAI_URL=https://api.openai.com/v1
+ANTHROPIC_URL=https://api.anthropic.com/v1
+GOOGLE_URL=https://generativelanguage.googleapis.com/v1
+GROK_URL=https://api.x.ai/v1
+COHERE_URL=https://api.cohere.ai/v1
+MISTRAL_URL=https://api.mistral.ai/v1
+PERPLEXITY_URL=https://api.perplexity.ai
+
+# Ollama server URL
+OLLAMA_URL=http://localhost:11434 

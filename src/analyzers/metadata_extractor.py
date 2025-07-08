@@ -4,13 +4,14 @@ import hashlib
 import datetime
 from PIL import Image
 import imagehash
-import logging
 import base64  # Ensure this line is included
 from typing import Dict, Any
 from io import BytesIO
+from src.utils.logger import get_global_logger
+from src.utils.error_handler import handle_errors, ErrorCategory, error_context
+from src.utils.debug_utils import debug_function
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+logger = get_global_logger()
 
 def compute_hashes(image: Image.Image) -> Dict[str, str]:
     """Compute perceptual hashes of the image."""
@@ -37,11 +38,12 @@ def encode_image(image: Image.Image) -> str:
     encoded_string = base64.b64encode(buffered.getvalue()).decode("utf-8")
     return encoded_string
 
+@debug_function(profile=True)
 def resize_image(image: Image.Image, max_size: int = 1024) -> Image.Image:
     """Resize image to a maximum dimension."""
     original_size = image.size
     image.thumbnail((max_size, max_size), Image.LANCZOS)  # Use LANCZOS for high-quality downsampling
-    logging.debug(f"Resized image from {original_size} to {image.size}")
+    logger.debug(f"Resized image from {original_size} to {image.size}")
     return image
 
 def generate_thumbnail(image: Image.Image, size: tuple = (128, 128)) -> Image.Image:
@@ -50,8 +52,11 @@ def generate_thumbnail(image: Image.Image, size: tuple = (128, 128)) -> Image.Im
     thumbnail.thumbnail(size, Image.LANCZOS)  # Change ANTIALIAS to LANCZOS
     return thumbnail
 
+@handle_errors(category=ErrorCategory.FILE_IO)
 def extract_metadata(image_path: str) -> Dict[str, Any]:
     """Extract metadata and compute hashes for an image."""
+    logger.info(f"Extracting metadata from: {image_path}")
+    
     metadata = {}
     date_added = datetime.datetime.now().isoformat()
     date_modified = datetime.datetime.fromtimestamp(os.path.getmtime(image_path)).isoformat()
@@ -92,22 +97,29 @@ def extract_metadata(image_path: str) -> Dict[str, Any]:
             metadata['thumbnail'] = encode_image(thumbnail)
 
     except FileNotFoundError:
-        logging.error(f"File not found: {image_path}")
+        logger.error(f"File not found: {image_path}")
         return {}
     except Exception as e:
-        logging.error(f"Error opening image: {e}")
+        logger.error(f"Error opening image: {e}")
         return {}
 
+    logger.info(f"Successfully extracted metadata for: {image_path}", 
+               data={'file_size': metadata.get('file_size'), 'dimensions': f"{metadata.get('width')}x{metadata.get('height')}"})
     return metadata
 
+@handle_errors(category=ErrorCategory.FILE_IO)
 def save_metadata_to_json(metadata: Dict[str, Any], output_path: str):
     """Save metadata to a JSON file."""
+    logger.debug(f"Saving metadata to: {output_path}")
     with open(output_path, 'w') as f:
         json.dump(metadata, f, indent=4)
-    logging.info(f"Saved metadata to {output_path}")
+    logger.info(f"Saved metadata to {output_path}")
 
+@handle_errors(category=ErrorCategory.FILE_IO)
 def process_image_file(image_path: str, output_directory: str):
     """Process an image file and save metadata."""
+    logger.info(f"Processing image file: {image_path}")
+    
     metadata = extract_metadata(image_path)
     filename = os.path.basename(image_path)
     name, ext = os.path.splitext(filename)
@@ -118,7 +130,7 @@ def process_image_file(image_path: str, output_directory: str):
     if os.getenv('CREATE_DATA_FILE', 'True').lower() == 'true':
         save_metadata_to_json(metadata, output_path)
     else:
-        logging.info(f"Data file creation skipped for {output_filename}.")
+        logger.info(f"Data file creation skipped for {output_filename}.")
 
 if __name__ == "__main__":
     import argparse

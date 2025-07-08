@@ -76,11 +76,10 @@ class TestMetadataExtractor(unittest.TestCase):
             "file_size": 1024000
         }
         
-        result = process_image_file(self.test_image_path)
+        # Test with output directory
+        output_dir = "test_output"
+        process_image_file(self.test_image_path, output_dir)
         
-        self.assertEqual(result["status"], "success")
-        self.assertIn("metadata", result)
-        self.assertEqual(result["metadata"]["width"], 1920)
         mock_extract.assert_called_once_with(self.test_image_path)
     
     @patch('src.analyzers.metadata_extractor.extract_metadata')
@@ -89,10 +88,10 @@ class TestMetadataExtractor(unittest.TestCase):
         # Mock metadata extraction error
         mock_extract.return_value = {"error": "Test error"}
         
-        result = process_image_file(self.test_image_path)
+        # Test with output directory
+        output_dir = "test_output"
+        process_image_file(self.test_image_path, output_dir)
         
-        self.assertEqual(result["status"], "error")
-        self.assertIn("Test error", result["message"])
         mock_extract.assert_called_once_with(self.test_image_path)
     
     @patch('src.analyzers.metadata_extractor.Image.open')

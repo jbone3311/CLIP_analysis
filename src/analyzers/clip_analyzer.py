@@ -3,7 +3,6 @@ import base64
 import os
 import json
 import argparse
-import logging
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 import datetime
@@ -17,9 +16,13 @@ from database.db_manager import DatabaseManager
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure logging
-log_level = os.getenv('LOGGING_LEVEL', 'INFO').upper()
-logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
+# Import utilities
+from src.utils.logger import get_global_logger
+from src.utils.error_handler import ErrorCategory, error_context, handle_errors
+from src.utils.debug_utils import debug_function, log_api_calls
+
+# Get logger
+logger = get_global_logger()
 
 # Load status messages from .env or set default words
 EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "SUCCESS")
@@ -36,9 +39,9 @@ def encode_image_to_base64(image_path: str) -> str:
     try:
         with open(image_path, "rb") as image_file:
             image_data = image_file.read()
-            logging.debug(f"Read {len(image_data)} bytes from {image_path}")
+            logger.debug(f"Read {len(image_data)} bytes from {image_path}")
             encoded_string = base64.b64encode(image_data).decode("utf-8")
-            logging.debug(f"Encoded image (first 100 chars): {encoded_string[:100]}")
+            logger.debug(f"Encoded image (first 100 chars): {encoded_string[:100]}")
             return encoded_string
     except FileNotFoundError:
         raise FileNotFoundError(f"Image file not found: {image_path}")
@@ -62,40 +65,40 @@ def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str
                 "mode": mode
             }
             
-            logging.debug(f"Sending request to {api_base_url}/interrogator/prompt with mode: {mode}")
+            logger.debug(f"Sending request to {api_base_url}/interrogator/prompt with mode: {mode}")
             
             try:
                 response = requests.post(
                     f"{api_base_url}/interrogator/prompt",
                     headers=headers,
                     json=payload,
-                    timeout=timeout
+                    timeout=300
                 )
                 response.raise_for_status()
                 response_data = response.json()
                 prompts[mode] = response_data
-                logging.debug(f"Successfully processed mode: {mode}")
+                logger.debug(f"Successfully processed mode: {mode}")
                 
             except requests.exceptions.Timeout:
-                logging.error(f"Timeout during prompt generation for mode: {mode}")
+                logger.error(f"Timeout during prompt generation for mode: {mode}")
                 prompts[mode] = {"status": "error", "message": "Request timeout"}
             except requests.exceptions.RequestException as e:
-                logging.error(f"Request failed for mode {mode}: {e}")
+                logger.error(f"Request failed for mode {mode}: {e}")
                 prompts[mode] = {"status": "error", "message": str(e)}
             except Exception as e:
-                logging.error(f"Unexpected error for mode {mode}: {e}")
+                logger.error(f"Unexpected error for mode {mode}: {e}")
                 prompts[mode] = {"status": "error", "message": str(e)}
         
         return {"status": "success", "prompt": prompts}
         
     except Exception as e:
-        logging.error(f"Failed to generate prompts: {e}")
+        logger.error(f"Failed to generate prompts: {e}")
         return {"status": "error", "message": str(e)}
 
-def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str]) -> Dict[str, Any]:
-    """Analyze an image using CLIP interrogator with comprehensive error handling"""
+def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], force_reprocess: bool = False, progress_callback=None) -> Dict[str, Any]:
+    """Analyze an image using CLIP interrogator with comprehensive error handling and progress updates"""
     try:
-        logging.info(f"Starting CLIP analysis for {image_path}")
+        logger.info(f"Starting CLIP analysis for {image_path}")
         
         # Validate inputs
         if not os.path.exists(image_path):
@@ -115,66 +118,85 @@ def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, mode
         except Exception as e:
             return {"status": "error", "message": f"Failed to read image file: {e}"}
         
-        # Prepare payload for analysis
-        payload = {
-            "image": encoded_image,
+        # Process each mode with progress updates
+        results = {}
+        for i, mode in enumerate(modes, 1):
+            if progress_callback:
+                progress_callback(step="CLIP", mode=mode)
+            
+            logger.debug(f"Processing CLIP mode {i}/{len(modes)}: {mode}")
+            
+            # Prepare payload for analysis
+            payload = {
+                "image": encoded_image,
+                "model": model,
+                "mode": mode
+            }
+
+            logger.debug(f"Sending analysis request to {api_base_url}/interrogator/analyze for mode: {mode}")
+
+            headers = {
+                "Content-Type": "application/json"
+            }
+
+            # Make the API request
+            try:
+                response = requests.post(
+                    f"{api_base_url}/interrogator/analyze", 
+                    headers=headers, 
+                    json=payload,
+                    timeout=300
+                )
+                response.raise_for_status()
+                result = response.json()
+                
+                # Ensure 'status' key is present
+                if "status" not in result:
+                    result["status"] = "success"
+                
+                results[mode] = result
+                logger.debug(f"Successfully processed mode: {mode}")
+
+            except requests.exceptions.Timeout:
+                error_msg = f"CLIP API request timed out for mode: {mode}"
+                logger.error(error_msg)
+                results[mode] = {"status": "error", "message": error_msg}
+                
+            except requests.exceptions.ConnectionError:
+                error_msg = f"Cannot connect to CLIP API at {api_base_url} for mode: {mode}"
+                logger.error(error_msg)
+                results[mode] = {"status": "error", "message": error_msg}
+                
+            except requests.exceptions.HTTPError as http_err:
+                error_msg = f"HTTP error during CLIP analysis for mode {mode}: {http_err}"
+                logger.error(error_msg)
+                results[mode] = {"status": "error", "message": error_msg}
+                
+            except Exception as err:
+                error_msg = f"Unexpected error during CLIP analysis for mode {mode}: {err}"
+                logger.error(error_msg)
+                results[mode] = {"status": "error", "message": error_msg}
+        
+        # Create final result structure
+        final_result = {
+            "status": "success",
             "model": model,
-            "modes": modes
+            "modes": modes,
+            "results": results
         }
-
-        logging.debug(f"Sending analysis request to {api_base_url}/interrogator/analyze")
-
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        # Make the API request
-        try:
-            response = requests.post(
-                f"{api_base_url}/interrogator/analyze", 
-                headers=headers, 
-                json=payload,
-                timeout=60
-            )
-            response.raise_for_status()
-            result = response.json()
-            
-            # Ensure 'status' key is present
-            if "status" not in result:
-                result["status"] = "success"
-            
-            logging.info(f"CLIP analysis completed successfully for {image_path}")
-            return result
-
-        except requests.exceptions.Timeout:
-            error_msg = "CLIP API request timed out"
-            logging.error(error_msg)
-            return {"status": "error", "message": error_msg}
-            
-        except requests.exceptions.ConnectionError:
-            error_msg = f"Cannot connect to CLIP API at {api_base_url}"
-            logging.error(error_msg)
-            return {"status": "error", "message": error_msg}
-            
-        except requests.exceptions.HTTPError as http_err:
-            error_msg = f"HTTP error during CLIP analysis: {http_err}"
-            logging.error(error_msg)
-            return {"status": "error", "message": error_msg}
-            
-        except Exception as err:
-            error_msg = f"Unexpected error during CLIP analysis: {err}"
-            logging.error(error_msg)
-            return {"status": "error", "message": error_msg}
+        
+        logger.info(f"CLIP analysis completed successfully for {image_path}")
+        return final_result
 
     except Exception as e:
         error_msg = f"Failed to analyze image {image_path}: {e}"
-        logging.error(error_msg)
+        logger.error(error_msg)
         return {"status": "error", "message": error_msg}
 
 def process_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], force_reprocess: bool = False) -> Dict[str, Any]:
     """Process an image with CLIP analysis and return unified result structure with database integration"""
     try:
-        logging.info(f"Processing image with CLIP: {image_path}")
+        logger.info(f"Processing image with CLIP: {image_path}")
         
         # Compute MD5 for database lookup
         image_md5 = compute_md5(image_path)
@@ -183,7 +205,7 @@ def process_image_with_clip(image_path: str, api_base_url: str, model: str, mode
         if not force_reprocess:
             existing_result = db_manager.get_result_by_md5(image_md5)
             if existing_result:
-                logging.info(f"Found existing CLIP analysis in database for {image_path}")
+                logger.info(f"Found existing CLIP analysis in database for {image_path}")
                 return {
                     "status": "success",
                     "message": "Retrieved from database",
@@ -233,16 +255,16 @@ def process_image_with_clip(image_path: str, api_base_url: str, model: str, mode
                     "modes": modes
                 })
             )
-            logging.info(f"Saved CLIP analysis to database for {image_path}")
+            logger.info(f"Saved CLIP analysis to database for {image_path}")
         except Exception as db_error:
-            logging.warning(f"Failed to save to database: {db_error}")
+            logger.warning(f"Failed to save to database: {db_error}")
 
-        logging.info(f"CLIP processing completed successfully for {image_path}")
+        logger.info(f"CLIP processing completed successfully for {image_path}")
         return output_data
 
     except Exception as e:
         error_msg = f"CLIP processing failed for {image_path}: {e}"
-        logging.error(error_msg)
+        logger.error(error_msg)
         return {"status": "error", "message": error_msg}
 
 def compute_md5(file_path: str) -> str:
@@ -254,7 +276,7 @@ def compute_md5(file_path: str) -> str:
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
     except Exception as e:
-        logging.error(f"Failed to compute MD5 for {file_path}: {e}")
+        logger.error(f"Failed to compute MD5 for {file_path}: {e}")
         return "unknown"
 
 def save_json(data: Dict[str, Any], filename: str):
@@ -262,9 +284,9 @@ def save_json(data: Dict[str, Any], filename: str):
     try:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        logging.info(f"{EMOJI_SUCCESS} Saved output to {filename}")
+        logger.info(f"{EMOJI_SUCCESS} Saved output to {filename}")
     except Exception as e:
-        logging.error(f"{EMOJI_ERROR} Failed to save to {filename}: {e}")
+        logger.error(f"{EMOJI_ERROR} Failed to save to {filename}: {e}")
         raise
 
 def validate_clip_config(api_base_url: str, model: str, modes: List[str]) -> List[str]:

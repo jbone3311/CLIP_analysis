@@ -127,7 +127,7 @@ class TestUnifiedAnalysisResult(unittest.TestCase):
             }
         }
         
-        self.result.add_llm_result(llm_result)
+        self.result.add_llm_results(llm_result)
         
         self.assertIn("P1", self.result.result["analysis"]["llm"])
         self.assertIn("P2", self.result.result["analysis"]["llm"])
@@ -140,7 +140,7 @@ class TestUnifiedAnalysisResult(unittest.TestCase):
             "message": "LLM analysis failed"
         }
         
-        self.result.add_llm_result(llm_result)
+        self.result.add_llm_results(llm_result)
         
         self.assertEqual(len(self.result.result["processing_info"]["errors"]), 1)
         self.assertEqual(self.result.result["processing_info"]["errors"][0]["type"], "llm")

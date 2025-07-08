@@ -29,7 +29,6 @@ To list all available prompts:
 """
 
 import os
-import logging
 import requests
 import argparse
 import json
@@ -48,6 +47,14 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(script_dir, '.env')
 load_dotenv(dotenv_path)
 
+# Import utilities
+from src.utils.logger import get_global_logger
+from src.utils.error_handler import ErrorCategory, error_context, handle_errors
+from src.utils.debug_utils import debug_function, log_api_calls
+
+# Get logger
+logger = get_global_logger()
+
 # Load status messages from .env or set default text labels
 EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "(SUCCESS)")
 EMOJI_WARNING = os.getenv("EMOJI_WARNING", "(WARNING)")
@@ -56,12 +63,6 @@ EMOJI_INFO = os.getenv("EMOJI_INFO", "(INFO)")
 EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "(PROCESSING)")
 EMOJI_START = os.getenv("EMOJI_START", "(START)")
 EMOJI_COMPLETE = os.getenv("EMOJI_COMPLETE", "(COMPLETE)")
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
 
 class Config:
     RETRY_LIMIT = int(os.getenv("RETRY_LIMIT", 5))
@@ -72,6 +73,7 @@ class Config:
 def load_llm_models() -> List[Dict[str, str]]:
     """
     Loads all defined LLM models from the .env file.
+    For OpenAI models, uses the OPENAI_API_KEY environment variable.
 
     Returns:
         List[Dict[str, str]]: A list of dictionaries containing LLM model configurations.
@@ -85,6 +87,11 @@ def load_llm_models() -> List[Dict[str, str]]:
         model_model = os.getenv(f"LLM_{model_number}_MODEL")
         if not model_title or not model_api_url or not model_model:
             break
+        
+        # For OpenAI models, use the main OPENAI_API_KEY environment variable
+        if model_api_url and "openai.com" in model_api_url:
+            model_api_key = os.getenv('OPENAI_API_KEY')
+        
         models.append({
             "number": model_number,
             "title": model_title,

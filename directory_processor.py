@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 import time
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -8,6 +7,7 @@ from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional
 from src.analyzers.clip_analyzer import analyze_image_with_clip
 from src.analyzers.llm_analyzer import analyze_image_with_llm, MODELS
+from src.analyzers.llm_manager import LLMManager
 from src.analyzers.metadata_extractor import extract_metadata
 from src.database.db_manager import DatabaseManager
 import requests
@@ -18,30 +18,49 @@ import sys
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-log_level = os.getenv('LOGGING_LEVEL', 'INFO').upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("processing.log", encoding='utf-8')
-    ]
-)
+# Import utilities
+from src.utils.logger import get_global_logger
+from src.utils.error_handler import ErrorCategory, error_context, handle_errors
+from src.utils.debug_utils import debug_function, debug_context
+
+# Get logger
+logger = get_global_logger()
 
 class ProgressTracker:
-    """Tracks and displays progress for batch processing"""
+    """Tracks and displays progress for batch processing with detailed status"""
     
     def __init__(self, total_items: int):
         self.total_items = total_items
         self.completed = 0
         self.failed = 0
         self.start_time = time.time()
+        self.current_image = ""
+        self.current_step = ""
+        self.current_mode = ""
         
-    def update(self, success: bool = True):
+    def update(self, success: bool = True, image_name: str = "", step: str = "", mode: str = ""):
+        """Update progress with detailed status information"""
         self.completed += 1
         if not success:
             self.failed += 1
+        
+        if image_name:
+            self.current_image = image_name
+        if step:
+            self.current_step = step
+        if mode:
+            self.current_mode = mode
+            
+        self._display_progress()
+    
+    def update_status(self, image_name: str = "", step: str = "", mode: str = ""):
+        """Update status without incrementing progress counter"""
+        if image_name:
+            self.current_image = image_name
+        if step:
+            self.current_step = step
+        if mode:
+            self.current_mode = mode
         self._display_progress()
     
     def _display_progress(self):
@@ -51,7 +70,22 @@ class ProgressTracker:
         
         progress_bar = self._create_progress_bar()
         
-        print(f"\r{progress_bar} {self.completed}/{self.total_items} "
+        # Create status line
+        status_parts = []
+        status_parts.append(f"Image {self.completed}/{self.total_items}")
+        
+        if self.current_image:
+            status_parts.append(f"'{os.path.basename(self.current_image)}'")
+        
+        if self.current_step:
+            status_parts.append(f"[{self.current_step}]")
+            
+        if self.current_mode:
+            status_parts.append(f"Mode: {self.current_mode}")
+        
+        status_line = " | ".join(status_parts)
+        
+        print(f"\r{progress_bar} {status_line} "
               f"({self.completed/self.total_items*100:.1f}%) "
               f"| Failed: {self.failed} | "
               f"Rate: {rate:.1f}/s | ETA: {eta:.0f}s", end="", flush=True)
@@ -63,11 +97,11 @@ class ProgressTracker:
     
     def finish(self):
         elapsed = time.time() - self.start_time
-        print(f"\n✅ Processing complete! "
+        print(f"\n[SUCCESS] Processing complete! "
               f"Processed {self.completed} images in {elapsed:.1f}s "
               f"({self.completed/elapsed:.1f} images/s)")
         if self.failed > 0:
-            print(f"❌ {self.failed} images failed to process")
+            print(f"[ERROR] {self.failed} images failed to process")
 
 class UnifiedAnalysisResult:
     """Represents a unified analysis result for a single image"""
@@ -118,7 +152,7 @@ class UnifiedAnalysisResult:
                     hash_md5.update(chunk)
             return hash_md5.hexdigest()
         except Exception as e:
-            logging.error(f"Failed to compute MD5 for {self.image_path}: {e}")
+            logger.error(f"Failed to compute MD5 for {self.image_path}: {e}")
             return "unknown"
     
     def add_clip_result(self, clip_result: Dict[str, Any]):
@@ -131,15 +165,9 @@ class UnifiedAnalysisResult:
                 "error": clip_result.get("message", "Unknown CLIP error")
             })
     
-    def add_llm_result(self, llm_result: Dict[str, Any]):
-        """Add LLM analysis results"""
-        if llm_result.get("status") == "success":
-            self.result["analysis"]["llm"] = llm_result.get("api_responses", {})
-        else:
-            self.result["processing_info"]["errors"].append({
-                "type": "llm",
-                "error": llm_result.get("message", "Unknown LLM error")
-            })
+    def add_llm_results(self, llm_results: Dict[str, Any]):
+        """Add multiple LLM analysis results"""
+        self.result["analysis"]["llm"] = llm_results
     
     def add_metadata(self, metadata: Dict[str, Any]):
         """Add image metadata"""
@@ -167,29 +195,27 @@ class UnifiedAnalysisResult:
         try:
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(self.result, f, indent=2, ensure_ascii=False)
-            logging.info(f"Saved unified analysis result to {output_path}")
+            logger.info(f"Saved unified analysis result to {output_path}")
             return output_path
         except Exception as e:
-            logging.error(f"Failed to save analysis result: {e}")
+            logger.error(f"Failed to save analysis result: {e}")
             return ""
 
 class DirectoryProcessor:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.llm_models = self.setup_llm_models() if self.config['ENABLE_LLM_ANALYSIS'] else []
-        self.config['llm_models'] = self.llm_models  # Add to config for reference
-        
-        # Initialize database manager
         self.db_manager = DatabaseManager()
-        
+        self.llm_manager = LLMManager()
+        # Use database for LLM models
+        self.llm_models = self.db_manager.get_llm_models() if self.config['ENABLE_LLM_ANALYSIS'] else []
+        self.config['llm_models'] = self.llm_models  # Add to config for reference
         # Validate configuration
         self._validate_config()
-        
-        logging.info("DirectoryProcessor initialized with config: %s", self.config)
-        logging.debug(f"CLIP Analysis Enabled: {self.config['ENABLE_CLIP_ANALYSIS']}")
-        logging.debug(f"LLM Analysis Enabled: {self.config['ENABLE_LLM_ANALYSIS']}")
-        logging.debug(f"Available LLM Models: {[m['title'] for m in self.llm_models]}")
-        logging.info("Database integration enabled")
+        logger.info("DirectoryProcessor initialized with config", data={'config': str(self.config)})
+        logger.debug(f"CLIP Analysis Enabled: {self.config['ENABLE_CLIP_ANALYSIS']}")
+        logger.debug(f"LLM Analysis Enabled: {self.config['ENABLE_LLM_ANALYSIS']}")
+        logger.debug(f"Available LLM Models: {[m['name'] for m in self.llm_models]}")
+        logger.info("Database integration enabled")
 
     def _validate_config(self):
         """Validate configuration and provide helpful error messages"""
@@ -201,7 +227,7 @@ class DirectoryProcessor:
         if not os.path.exists(self.config['OUTPUT_DIRECTORY']):
             try:
                 os.makedirs(self.config['OUTPUT_DIRECTORY'])
-                logging.info(f"Created output directory: {self.config['OUTPUT_DIRECTORY']}")
+                logger.info(f"Created output directory: {self.config['OUTPUT_DIRECTORY']}")
             except Exception as e:
                 errors.append(f"Cannot create output directory '{self.config['OUTPUT_DIRECTORY']}': {e}")
         
@@ -222,33 +248,28 @@ class DirectoryProcessor:
             sys.exit(1)
 
     def setup_llm_models(self) -> List[Dict[str, Any]]:
-        """Setup LLM models from configuration"""
-        analyzers = []
-        for model in MODELS:
-            enabled = os.getenv(f"ENABLE_LLM_{model['number']}", 'False').lower() == 'true'
-            if enabled:
-                # Validate model configuration
-                if not model.get('api_key'):
-                    logging.warning(f"Model {model['title']} enabled but no API key provided")
-                analyzers.append(model)
-                logging.info(f"✅ {model['title']} is enabled for analysis")
-            else:
-                logging.debug(f"❌ {model['title']} is disabled for analysis")
-        return analyzers
+        """Deprecated: Use db_manager.get_llm_models() instead."""
+        logger.warning("setup_llm_models() is deprecated. Use db_manager.get_llm_models() instead.")
+        return []
 
     def process_directory(self):
         """Process all images in the directory with progress tracking"""
         image_files = self.find_image_files(self.config['IMAGE_DIRECTORY'])
         
         if not image_files:
-            print(f"❌ No image files found in {self.config['IMAGE_DIRECTORY']}")
+            print(f"[ERROR] No image files found in {self.config['IMAGE_DIRECTORY']}")
             return
         
-        print(f"🚀 Starting analysis of {len(image_files)} images...")
-        print(f"📁 Input directory: {self.config['IMAGE_DIRECTORY']}")
-        print(f"📁 Output directory: {self.config['OUTPUT_DIRECTORY']}")
-        print(f"🔍 CLIP Analysis: {'✅ Enabled' if self.config['ENABLE_CLIP_ANALYSIS'] else '❌ Disabled'}")
-        print(f"🤖 LLM Analysis: {'✅ Enabled' if self.config['ENABLE_LLM_ANALYSIS'] else '❌ Disabled'}")
+        print(f"[START] Starting analysis of {len(image_files)} images...")
+        print(f"[DIR] Input directory: {self.config['IMAGE_DIRECTORY']}")
+        print(f"[DIR] Output directory: {self.config['OUTPUT_DIRECTORY']}")
+        print(f"[CLIP] CLIP Analysis: {'[ENABLED]' if self.config['ENABLE_CLIP_ANALYSIS'] else '[DISABLED]'}")
+        if self.config['ENABLE_CLIP_ANALYSIS']:
+            print(f"[CLIP] CLIP Modes: {', '.join(self.config['CLIP_MODES'])}")
+            print(f"[CLIP] CLIP Model: {self.config['CLIP_MODEL_NAME']}")
+        print(f"[LLM] LLM Analysis: {'[ENABLED]' if self.config['ENABLE_LLM_ANALYSIS'] else '[DISABLED]'}")
+        print(f"[META] Metadata Extraction: {'[ENABLED]' if self.config.get('ENABLE_METADATA_EXTRACTION', True) else '[DISABLED]'}")
+        print(f"[PARALLEL] Parallel Processing: {'[ENABLED]' if self.config['ENABLE_PARALLEL_PROCESSING'] else '[DISABLED]'}")
         print()
 
         progress = ProgressTracker(len(image_files))
@@ -265,10 +286,9 @@ class DirectoryProcessor:
         """Process images sequentially"""
         for image_file in image_files:
             try:
-                success = self.process_image(image_file)
-                progress.update(success)
+                success = self.process_image(image_file, progress)
             except Exception as e:
-                logging.error(f"Failed to process {image_file}: {e}")
+                logger.error(f"Failed to process {image_file}: {e}")
                 progress.update(False)
 
     def _process_parallel(self, image_files: List[str], progress: ProgressTracker):
@@ -277,7 +297,7 @@ class DirectoryProcessor:
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_image = {
-                executor.submit(self.process_image, image_file): image_file 
+                executor.submit(self.process_image, image_file, progress): image_file 
                 for image_file in image_files
             }
             
@@ -285,10 +305,10 @@ class DirectoryProcessor:
                 image_file = future_to_image[future]
                 try:
                     success = future.result()
-                    progress.update(success)
+                    # Progress is already updated in process_image method
                 except Exception as e:
-                    logging.error(f"Failed to process {image_file}: {e}")
-                    progress.update(False)
+                    logger.error(f"Failed to process {image_file}: {e}")
+                    progress.update(success=False, image_name=image_file, step="Error")
 
     def _compute_md5(self, file_path: str) -> str:
         """Compute MD5 hash of a file"""
@@ -299,7 +319,7 @@ class DirectoryProcessor:
                     hash_md5.update(chunk)
             return hash_md5.hexdigest()
         except Exception as e:
-            logging.error(f"Failed to compute MD5 for {file_path}: {e}")
+            logger.error(f"Failed to compute MD5 for {file_path}: {e}")
             return "unknown"
 
     def find_image_files(self, directory: str) -> List[str]:
@@ -312,29 +332,37 @@ class DirectoryProcessor:
                 if file.lower().endswith(supported_formats):
                     full_path = os.path.join(root, file)
                     image_files.append(full_path)
-                    logging.debug(f"Found image file: {full_path}")
+                    logger.debug(f"Found image file: {full_path}")
         
         return sorted(image_files)
 
-    def process_image(self, image_file: str) -> bool:
-        """Process a single image and return success status"""
+    def process_image(self, image_file: str, progress_tracker: ProgressTracker = None) -> bool:
+        """Process a single image and return success status with detailed progress updates"""
         start_time = time.time()
         
         try:
-            logging.info(f"Processing image: {image_file}")
+            logger.info(f"Processing image: {image_file}")
+            
+            # Update progress with current image
+            if progress_tracker:
+                progress_tracker.update_status(image_name=image_file, step="Starting")
             
             # Check for existing analysis in database first
             image_md5 = self._compute_md5(image_file)
             if not self.config.get('FORCE_REPROCESS', False):
                 existing_db_result = self.db_manager.get_result_by_md5(image_md5)
                 if existing_db_result:
-                    logging.info(f"Skipping {image_file} - analysis already exists in database")
+                    logger.info(f"Skipping {image_file} - analysis already exists in database")
+                    if progress_tracker:
+                        progress_tracker.update_status(image_name=image_file, step="Skipped (exists)")
                     return True
             
             # Check for existing analysis in files
             existing_result = self._load_existing_analysis(image_file)
             if existing_result and not self.config.get('FORCE_REPROCESS', False):
-                logging.info(f"Skipping {image_file} - analysis already exists in files")
+                logger.info(f"Skipping {image_file} - analysis already exists in files")
+                if progress_tracker:
+                    progress_tracker.update_status(image_name=image_file, step="Skipped (exists)")
                 return True
             
             # Create unified analysis result
@@ -342,56 +370,110 @@ class DirectoryProcessor:
             
             # Process image metadata
             if self.config.get('ENABLE_METADATA_EXTRACTION', True):
+                if progress_tracker:
+                    progress_tracker.update_status(image_name=image_file, step="Metadata")
                 try:
                     metadata = extract_metadata(image_file)
                     analysis_result.add_metadata(metadata)
                 except Exception as e:
-                    logging.warning(f"Failed to extract metadata for {image_file}: {e}")
+                    logger.warning(f"Failed to extract metadata for {image_file}: {e}")
             
             # CLIP Analysis
             if self.config['ENABLE_CLIP_ANALYSIS']:
+                if progress_tracker:
+                    progress_tracker.update_status(image_name=image_file, step="CLIP")
                 try:
+                    # Create progress callback for CLIP analysis
+                    def clip_progress_callback(step="CLIP", mode=""):
+                        if progress_tracker:
+                            progress_tracker.update_status(image_name=image_file, step=step, mode=mode)
+                    
                     clip_result = analyze_image_with_clip(
                         image_path=image_file,
                         api_base_url=self.config['API_BASE_URL'],
                         model=self.config['CLIP_MODEL_NAME'],
                         modes=self.config['CLIP_MODES'],
-                        force_reprocess=self.config.get('FORCE_REPROCESS', False)
+                        force_reprocess=self.config.get('FORCE_REPROCESS', False),
+                        progress_callback=clip_progress_callback
                     )
                     analysis_result.add_clip_result(clip_result)
                 except Exception as e:
-                    logging.error(f"CLIP analysis failed for {image_file}: {e}")
+                    logger.error(f"CLIP analysis failed for {image_file}: {e}")
                     analysis_result.mark_failed(f"CLIP analysis failed: {e}")
             
             # LLM Analysis
             if self.config['ENABLE_LLM_ANALYSIS']:
-                for model_config in self.llm_models:
-                    try:
-                        llm_result = analyze_image_with_llm(
-                            image_path_or_directory=image_file,
-                            prompt_ids=self.config['PROMPT_CHOICES'],
-                            model_number=model_config['number'],
-                            debug=self.config['DEBUG']
-                        )
-                        analysis_result.add_llm_result(llm_result)
-                    except Exception as e:
-                        logging.error(f"LLM analysis failed for {image_file} with model {model_config['title']}: {e}")
-                        analysis_result.mark_failed(f"LLM analysis failed with {model_config['title']}: {e}")
+                if progress_tracker:
+                    progress_tracker.update_status(image_name=image_file, step="LLM")
+                # Get configured LLM models from database
+                configured_llm_models = self.db_manager.get_llm_models()
+                
+                if configured_llm_models:
+                    llm_results = {}
+                    for model_config in configured_llm_models:
+                        if progress_tracker:
+                            progress_tracker.update_status(image_name=image_file, step="LLM", mode=model_config['name'])
+                        try:
+                            # Use the new LLM manager for analysis
+                            llm_result = self.llm_manager.analyze_image(
+                                image_path=image_file,
+                                prompt="Describe this image in detail, including visual elements, style, composition, and any notable features.",
+                                model_config=model_config
+                            )
+                            llm_results[model_config['name']] = llm_result
+                        except Exception as e:
+                            logger.error(f"LLM analysis failed for {image_file} with model {model_config['name']}: {e}")
+                            llm_results[model_config['name']] = {
+                                "status": "error",
+                                "message": str(e),
+                                "model": model_config['name'],
+                                "provider": model_config['type']
+                            }
+                    
+                    # Add all LLM results to analysis
+                    analysis_result.add_llm_results(llm_results)
+                else:
+                    logger.warning("No LLM models configured. Skipping LLM analysis.")
             
             # Mark as complete and save
+            if progress_tracker:
+                progress_tracker.update_status(image_name=image_file, step="Saving")
             processing_time = time.time() - start_time
             analysis_result.mark_complete(processing_time)
             output_path = analysis_result.save(self.config['OUTPUT_DIRECTORY'])
             
+            # Save to database
+            try:
+                self.db_manager.insert_result(
+                    filename=analysis_result.filename,
+                    directory=analysis_result.directory,
+                    md5=analysis_result.md5,
+                    model=analysis_result.result.get("analysis", {}).get("clip", {}).get("model", "unknown"),
+                    modes=json.dumps(self.config.get('CLIP_MODES', [])),
+                    prompts=json.dumps(analysis_result.result.get("analysis", {}).get("clip", {}).get("prompt", {})),
+                    analysis_results=json.dumps(analysis_result.result.get("analysis", {})),
+                    settings=json.dumps(self.config),
+                    llm_results=json.dumps(analysis_result.result.get("analysis", {}).get("llm", {}))
+                )
+                logger.info(f"Saved analysis to database for {image_file}")
+            except Exception as db_error:
+                logger.warning(f"Failed to save to database: {db_error}")
+            
             if output_path:
-                logging.info(f"✅ Successfully processed {image_file} in {processing_time:.2f}s")
+                logger.info(f"[SUCCESS] Successfully processed {image_file} in {processing_time:.2f}s")
+                if progress_tracker:
+                    progress_tracker.update(success=True, image_name=image_file, step="Complete")
                 return True
             else:
-                logging.error(f"❌ Failed to save results for {image_file}")
+                logger.error(f"[ERROR] Failed to save results for {image_file}")
+                if progress_tracker:
+                    progress_tracker.update(success=False, image_name=image_file, step="Failed")
                 return False
                 
         except Exception as e:
-            logging.error(f"❌ Failed to process image {image_file}: {e}")
+            logger.error(f"[ERROR] Failed to process image {image_file}: {e}")
+            if progress_tracker:
+                progress_tracker.update(success=False, image_name=image_file, step="Error")
             return False
 
     def _load_existing_analysis(self, image_file: str) -> Optional[Dict[str, Any]]:
@@ -409,10 +491,10 @@ class DirectoryProcessor:
                 if existing_data.get('file_info', {}).get('md5') == current_md5:
                     return existing_data
                 else:
-                    logging.info(f"Image {image_file} has changed, will reprocess")
+                    logger.info(f"Image {image_file} has changed, will reprocess")
                     return None
             except Exception as e:
-                logging.warning(f"Failed to load existing analysis for {image_file}: {e}")
+                logger.warning(f"Failed to load existing analysis for {image_file}: {e}")
                 return None
         return None
 
@@ -438,7 +520,7 @@ class DirectoryProcessor:
                     result = json.load(f)
                     all_results.append(result)
             except Exception as e:
-                logging.warning(f"Failed to load {analysis_file}: {e}")
+                logger.warning(f"Failed to load {analysis_file}: {e}")
         
         # Generate different types of summaries
         self._generate_clip_summary(all_results, summary_dir)
@@ -510,7 +592,7 @@ def main():
         'ENABLE_METADATA_EXTRACTION': os.getenv('ENABLE_METADATA_EXTRACTION', 'True') == 'True',
         'IMAGE_DIRECTORY': os.getenv('IMAGE_DIRECTORY', 'Images'),
         'OUTPUT_DIRECTORY': os.getenv('OUTPUT_DIRECTORY', 'Output'),
-        'CLIP_MODES': [mode.strip() for mode in os.getenv('CLIP_MODES', 'best,fast').split(',')],
+        'CLIP_MODES': [mode.strip() for mode in os.getenv('CLIP_MODES', 'best,fast,classic,negative,caption').split(',')],
         'PROMPT_CHOICES': [p.strip() for p in os.getenv('PROMPT_CHOICES', 'P1,P2').split(',')],
         'DEBUG': os.getenv('DEBUG', 'False') == 'True',
         'FORCE_REPROCESS': os.getenv('FORCE_REPROCESS', 'False') == 'True',
@@ -524,7 +606,7 @@ def main():
         print("\n⏹️  Processing interrupted by user")
     except Exception as e:
         print(f"\n❌ Fatal error: {e}")
-        logging.error(f"Fatal error: {e}")
+        logger.error(f"Fatal error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

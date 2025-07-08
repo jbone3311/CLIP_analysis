@@ -19,12 +19,12 @@ def print_banner():
 def check_python_version():
     """Check if Python version is compatible"""
     version = sys.version_info
-    if version.major < 3 or (version.major == 3 and version.minor < 8):
+    if version[0] < 3 or (version[0] == 3 and version[1] < 8):
         print("❌ Python 3.8 or higher is required")
-        print(f"   Current version: {version.major}.{version.minor}.{version.micro}")
+        print(f"   Current version: {version[0]}.{version[1]}.{version[2]}")
         return False
     
-    print(f"✅ Python {version.major}.{version.minor}.{version.micro} detected")
+    print(f"✅ Python {version[0]}.{version[1]}.{version[2]} detected")
     return True
 
 def install_dependencies():
@@ -58,12 +58,13 @@ def install_dependencies():
         print(f"❌ Error installing dependencies: {e}")
         return False
 
-def create_directories():
+def create_directories(directories=None):
     """Create necessary directories"""
     print("\n📁 Creating Directories")
     print("-" * 25)
     
-    directories = ["Images", "Output"]
+    if directories is None:
+        directories = ["Images", "Output"]
     
     for directory in directories:
         if not os.path.exists(directory):

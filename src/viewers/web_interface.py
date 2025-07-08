@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from directory_processor import DirectoryProcessor
 from src.database.db_manager import DatabaseManager
+from src.analyzers.llm_manager import LLMManager
 from dotenv import load_dotenv
 import os
 
@@ -38,8 +39,10 @@ app.secret_key = 'your-secret-key-here'  # Change this in production
 load_dotenv()
 
 # Configuration
-UPLOAD_FOLDER = 'Images'
-OUTPUT_FOLDER = 'Output'
+# Get the project root directory (2 levels up from this file)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+UPLOAD_FOLDER = os.path.join(PROJECT_ROOT, 'Images')
+OUTPUT_FOLDER = os.path.join(PROJECT_ROOT, 'Output')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'webp'}
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
 WEB_PORT = int(os.getenv('WEB_PORT', '5050'))
@@ -51,8 +54,9 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 processing_status = {}
 processing_threads = {}
 
-# Initialize database manager
+# Initialize database manager and LLM manager
 db_manager = DatabaseManager()
+llm_manager = LLMManager()
 
 def get_config():
     """Get current configuration from environment variables"""
@@ -61,9 +65,9 @@ def get_config():
         'CLIP_MODEL_NAME': os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai'),
         'ENABLE_CLIP_ANALYSIS': os.getenv('ENABLE_CLIP_ANALYSIS', 'True') == 'True',
         'ENABLE_LLM_ANALYSIS': os.getenv('ENABLE_LLM_ANALYSIS', 'True') == 'True',
-        'IMAGE_DIRECTORY': os.getenv('IMAGE_DIRECTORY', 'Images'),
-        'OUTPUT_DIRECTORY': os.getenv('OUTPUT_DIRECTORY', 'Output'),
-        'CLIP_MODES': os.getenv('CLIP_MODES', 'best,fast').split(','),
+        'IMAGE_DIRECTORY': os.path.join(PROJECT_ROOT, os.getenv('IMAGE_DIRECTORY', 'Images')),
+        'OUTPUT_DIRECTORY': os.path.join(PROJECT_ROOT, os.getenv('OUTPUT_DIRECTORY', 'Output')),
+        'CLIP_MODES': os.getenv('CLIP_MODES', 'best,fast,classic,negative,caption').split(','),
         'PROMPT_CHOICES': os.getenv('PROMPT_CHOICES', 'P1,P2').split(','),
         'LOGGING_LEVEL': os.getenv('LOGGING_LEVEL', 'INFO'),
         'RETRY_LIMIT': int(os.getenv('RETRY_LIMIT', '5')),
@@ -74,7 +78,7 @@ def get_config():
 def update_config(config_data):
     """Update configuration in .env file"""
     try:
-        env_file = '.env'
+        env_file = os.path.join(PROJECT_ROOT, '.env')
         
         # Read existing .env file
         env_lines = []
@@ -109,6 +113,12 @@ def update_config(config_data):
         
         # Reload environment variables
         load_dotenv(env_file, override=True)
+        
+        # Update global configuration variables
+        global WEB_PORT
+        WEB_PORT = int(os.getenv('WEB_PORT', '5050'))
+        
+        print(f"Configuration updated successfully. New WEB_PORT: {WEB_PORT}")
         
         return True
     except Exception as e:
@@ -218,9 +228,9 @@ def process_images_async():
             'ENABLE_LLM_ANALYSIS': os.getenv('ENABLE_LLM_ANALYSIS', 'True') == 'True',
             'ENABLE_PARALLEL_PROCESSING': os.getenv('ENABLE_PARALLEL_PROCESSING', 'False') == 'True',
             'ENABLE_METADATA_EXTRACTION': os.getenv('ENABLE_METADATA_EXTRACTION', 'True') == 'True',
-            'IMAGE_DIRECTORY': os.getenv('IMAGE_DIRECTORY', 'Images'),
-            'OUTPUT_DIRECTORY': os.getenv('OUTPUT_DIRECTORY', 'Output'),
-            'CLIP_MODES': [mode.strip() for mode in os.getenv('CLIP_MODES', 'best,fast').split(',')],
+            'IMAGE_DIRECTORY': os.path.join(PROJECT_ROOT, os.getenv('IMAGE_DIRECTORY', 'Images')),
+            'OUTPUT_DIRECTORY': os.path.join(PROJECT_ROOT, os.getenv('OUTPUT_DIRECTORY', 'Output')),
+            'CLIP_MODES': [mode.strip() for mode in os.getenv('CLIP_MODES', 'best,fast,classic,negative,caption').split(',')],
             'PROMPT_CHOICES': [p.strip() for p in os.getenv('PROMPT_CHOICES', 'P1,P2').split(',')],
             'DEBUG': os.getenv('DEBUG', 'False') == 'True',
             'FORCE_REPROCESS': os.getenv('FORCE_REPROCESS', 'False') == 'True',
@@ -318,7 +328,7 @@ def results():
     analysis_files = get_analysis_files()
     return render_template('results.html', analyses=analysis_files)
 
-@app.route('/result/<filename>')
+@app.route('/result/<path:filename>')
 def view_result(filename):
     """View specific analysis result"""
     file_path = os.path.join(OUTPUT_FOLDER, filename)
@@ -380,7 +390,7 @@ def config():
     current_config = get_config()
     return render_template('config.html', config=current_config)
 
-@app.route('/download/<filename>')
+@app.route('/download/<path:filename>')
 def download_result(filename):
     """Download analysis result"""
     file_path = os.path.join(OUTPUT_FOLDER, filename)
@@ -390,7 +400,7 @@ def download_result(filename):
         flash('File not found', 'error')
         return redirect(url_for('results'))
 
-@app.route('/api/analysis/<filename>')
+@app.route('/api/analysis/<path:filename>')
 def api_analysis(filename):
     """API endpoint to get analysis data"""
     file_path = os.path.join(OUTPUT_FOLDER, filename)
@@ -449,11 +459,159 @@ def api_database_result(result_id):
             result['prompts'] = json.loads(result['prompts']) if result['prompts'] else {}
             result['analysis_results'] = json.loads(result['analysis_results']) if result['analysis_results'] else {}
             result['settings'] = json.loads(result['settings']) if result['settings'] else {}
+            result['llm_results'] = json.loads(result['llm_results']) if result['llm_results'] else {}
             return jsonify(result)
         else:
             return jsonify({'error': 'Result not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/llm-config')
+def llm_config():
+    """LLM configuration page"""
+    try:
+        # Get available models from all providers
+        available_models = llm_manager.get_all_available_models()
+        
+        # Get configured models from database
+        configured_models = db_manager.get_llm_models()
+        
+        # Test connections for all providers
+        ollama_connected = llm_manager.test_ollama_connection()
+        openai_connected = llm_manager.test_openai_connection()
+        anthropic_connected = llm_manager.test_anthropic_connection()
+        google_connected = llm_manager.test_google_connection()
+        grok_connected = llm_manager.test_grok_connection()
+        cohere_connected = llm_manager.test_cohere_connection()
+        mistral_connected = llm_manager.test_mistral_connection()
+        perplexity_connected = llm_manager.test_perplexity_connection()
+        
+        return render_template('llm_config.html', 
+                             available_models=available_models,
+                             configured_models=configured_models,
+                             ollama_connected=ollama_connected,
+                             openai_connected=openai_connected,
+                             anthropic_connected=anthropic_connected,
+                             google_connected=google_connected,
+                             grok_connected=grok_connected,
+                             cohere_connected=cohere_connected,
+                             mistral_connected=mistral_connected,
+                             perplexity_connected=perplexity_connected)
+    except Exception as e:
+        flash(f'Error loading LLM configuration: {e}', 'error')
+        return render_template('llm_config.html', 
+                             available_models=[],
+                             configured_models=[],
+                             ollama_connected=False,
+                             openai_connected=False,
+                             anthropic_connected=False,
+                             google_connected=False,
+                             grok_connected=False,
+                             cohere_connected=False,
+                             mistral_connected=False,
+                             perplexity_connected=False)
+
+@app.route('/api/llm/models')
+def api_llm_models():
+    """API endpoint to get available LLM models"""
+    try:
+        models = llm_manager.get_all_available_models()
+        return jsonify(models)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/llm/configured')
+def api_llm_configured():
+    """API endpoint to get configured LLM models"""
+    try:
+        models = db_manager.get_llm_models()
+        return jsonify(models)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/llm/add', methods=['POST'])
+def api_llm_add():
+    """API endpoint to add LLM model configuration"""
+    try:
+        data = request.get_json()
+        
+        # For all API-based models, don't store API key in database - use environment variables
+        api_key = None
+        model_type = data['type']
+        
+        # Check if API key is available for the model type
+        if model_type in ['openai', 'anthropic', 'google', 'grok', 'cohere', 'mistral', 'perplexity']:
+            env_key_map = {
+                'openai': 'OPENAI_API_KEY',
+                'anthropic': 'ANTHROPIC_API_KEY',
+                'google': 'GOOGLE_API_KEY',
+                'grok': 'GROK_API_KEY',
+                'cohere': 'COHERE_API_KEY',
+                'mistral': 'MISTRAL_API_KEY',
+                'perplexity': 'PERPLEXITY_API_KEY'
+            }
+            
+            env_key = env_key_map.get(model_type)
+            if env_key:
+                api_key = os.getenv(env_key)
+                if not api_key:
+                    return jsonify({'error': f'{model_type.upper()} API key not found in environment variables. Set {env_key} in your .env file.'}), 400
+        
+        db_manager.insert_llm_model(
+            name=data['name'],
+            type=data['type'],
+            url=data.get('url'),
+            api_key=api_key,  # Will be None for all API-based models
+            model_name=data.get('model_name'),
+            prompts=data.get('prompts')
+        )
+        return jsonify({'status': 'success', 'message': 'LLM model added successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/llm/delete/<int:model_id>', methods=['DELETE'])
+def api_llm_delete(model_id):
+    """API endpoint to delete LLM model configuration"""
+    try:
+        success = db_manager.delete_llm_model(model_id)
+        if success:
+            return jsonify({'status': 'success', 'message': 'LLM model deleted successfully'})
+        else:
+            return jsonify({'error': 'Failed to delete model'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/llm/update-prompts/<int:model_id>', methods=['POST'])
+def api_llm_update_prompts(model_id):
+    """API endpoint to update LLM model prompts"""
+    try:
+        data = request.get_json()
+        success = db_manager.update_llm_model_prompts(model_id, data.get('prompts'))
+        if success:
+            return jsonify({'status': 'success', 'message': 'Prompts updated successfully'})
+        else:
+            return jsonify({'error': 'Failed to update prompts'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/prompts')
+def prompts():
+    """Prompt management page"""
+    try:
+        # Load prompts from the prompts.json file
+        prompts_file = os.path.join(PROJECT_ROOT, 'src', 'config', 'prompts.json')
+        prompts_data = {}
+        
+        if os.path.exists(prompts_file):
+            with open(prompts_file, 'r', encoding='utf-8') as f:
+                prompts_data = json.load(f)
+        
+        return render_template('prompts.html', prompts=prompts_data)
+        
+    except Exception as e:
+        print(f"Error loading prompts page: {e}")
+        flash(f'Error loading prompts: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     # Create necessary directories
@@ -461,6 +619,7 @@ if __name__ == '__main__':
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     
     print("🌐 Starting Web Interface...")
+    print(f"📁 Project root: {PROJECT_ROOT}")
     print(f"📁 Upload folder: {UPLOAD_FOLDER}")
     print(f"📁 Output folder: {OUTPUT_FOLDER}")
     print(f"🚀 Server starting at http://localhost:{WEB_PORT}")

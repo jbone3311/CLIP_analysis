@@ -5,7 +5,9 @@ A comprehensive image analysis system that combines CLIP (Contrastive Language-I
 ## ✨ Key Features
 
 - **🔍 CLIP Analysis**: Multi-mode image analysis using CLIP interrogator
-- **🤖 LLM Analysis**: Advanced text generation using multiple LLM models
+- **🤖 Multi-LLM Analysis**: Support for multiple LLM providers (Ollama, OpenAI, ChatGPT)
+- **🔧 Dynamic Model Discovery**: Automatically discover available Ollama models
+- **💬 ChatGPT Integration**: Direct integration with OpenAI's GPT models
 - **🌐 Web Interface**: Modern web application for easy image upload and result viewing
 - **📊 Unified Data Structure**: Consistent JSON format for all analysis results
 - **⚡ Incremental Processing**: Smart processing that only analyzes new or changed images
@@ -46,7 +48,83 @@ This will show an interactive menu with all available options.
 
 ## ⚙️ Configuration
 
-The system uses environment variables for configuration. You can set these in a `.env` file or through the web interface.
+The system uses a secure two-file configuration system:
+
+### Configuration Structure
+
+#### 🔑 Private Configuration (.env file)
+**Never commit this file to version control!** Contains sensitive information like API keys.
+
+Copy `env.sample` to `.env` and add your actual API keys:
+
+```bash
+# API Keys (Private - Keep Secret)
+OPENAI_API_KEY=your_actual_openai_api_key_here
+ANTHROPIC_API_KEY=your_actual_anthropic_api_key_here
+GOOGLE_API_KEY=your_actual_google_api_key_here
+OLLAMA_API_KEY=your_actual_ollama_api_key_here
+
+# API URLs (Private - Keep Secret)
+OPENAI_URL=https://api.openai.com/v1
+ANTHROPIC_URL=https://api.anthropic.com
+GOOGLE_URL=https://generativelanguage.googleapis.com
+OLLAMA_URL=http://localhost:11434
+
+# Database Configuration (Private)
+DATABASE_URL=sqlite:///image_analysis.db
+
+# Web Server Configuration (Private)
+WEB_PORT=5050
+SECRET_KEY=your_secret_key_here_change_this_in_production
+```
+
+#### ⚙️ Public Configuration (config.json)
+**Safe to commit to version control!** Contains application settings that can be shared.
+
+Copy `config.sample.json` to `config.json` and customize your settings:
+
+```json
+{
+  "clip_config": {
+    "api_base_url": "http://localhost:7860",
+    "model_name": "ViT-L-14/openai",
+    "enable_clip_analysis": true,
+    "clip_modes": ["best", "fast", "classic"],
+    "prompt_choices": ["P1", "P2", "P3", "P4", "P5"]
+  },
+  "analysis_features": {
+    "enable_llm_analysis": true,
+    "enable_metadata_extraction": true,
+    "enable_parallel_processing": true,
+    "generate_summaries": true,
+    "retry_limit": 3,
+    "timeout": 120
+  },
+  "ui_settings": {
+    "theme": "light",
+    "language": "en",
+    "auto_refresh": true,
+    "refresh_interval": 30
+  }
+}
+```
+
+#### 🤖 Model Configurations (src/config/models.json)
+Model configurations are managed separately in `src/config/models.json`:
+
+```json
+{
+  "models": [
+    {
+      "id": "gpt-4",
+      "title": "GPT-4",
+      "provider": "openai",
+      "model_name": "gpt-4",
+      "enabled": true
+    }
+  ]
+}
+```
 
 ### Environment Variables
 
@@ -65,8 +143,29 @@ The system uses environment variables for configuration. You can set these in a 
 - `CLIP_MODES`: Comma-separated list of CLIP modes (default: best,fast)
 - `PROMPT_CHOICES`: Comma-separated list of prompt choices (default: P1,P2)
 
+#### API URLs (usually don't need to change)
+- `OPENAI_URL`: URL for OpenAI API (default: https://api.openai.com/v1)
+- `ANTHROPIC_URL`: URL for Anthropic API (default: https://api.anthropic.com/v1)
+- `GOOGLE_URL`: URL for Google API (default: https://generativelanguage.googleapis.com/v1)
+- `GROK_URL`: URL for Grok API (default: https://api.x.ai/v1)
+- `COHERE_URL`: URL for Cohere API (default: https://api.cohere.ai/v1)
+- `MISTRAL_URL`: URL for Mistral API (default: https://api.mistral.ai/v1)
+- `PERPLEXITY_URL`: URL for Perplexity API (default: https://api.perplexity.ai)
+- `OLLAMA_URL`: URL for Ollama server (default: http://localhost:11434)
+
 ### Setup Configuration
 
+#### Quick Setup
+1. Copy the sample files:
+```bash
+cp env.sample .env
+cp config.sample.json config.json
+```
+
+2. Edit `.env` and add your actual API keys
+3. Edit `config.json` to customize your settings
+
+#### Interactive Setup
 Run the interactive configuration helper:
 
 ```bash
@@ -80,10 +179,13 @@ python src/config/config_manager.py
 ```
 
 This will guide you through setting up:
-- API endpoints and keys
-- CLIP and LLM model configurations
-- Directory paths
-- Processing options
+- **Private Settings**: Configure API keys and sensitive information (saved to `.env`)
+- **Public Settings**: Configure application features and preferences (saved to `config.json`)
+- **CLIP Configuration**: Set up CLIP analysis settings
+- **Directory Paths**: Configure image and output directories
+- **Processing Options**: Set up analysis features and options
+
+**Note**: Model configurations are managed separately in `src/config/models.json` and can be configured through the web interface.
 
 ### 2. Add Images
 
@@ -149,6 +251,40 @@ python src/viewers/results_viewer.py --list
 python src/viewers/results_viewer.py --file Output/image_analysis.json
 ```
 
+## 🤖 LLM Configuration
+
+The system supports multiple LLM providers for enhanced image analysis:
+
+### Supported LLM Providers
+
+#### Ollama (Local)
+- **Setup**: Install and run Ollama server locally
+- **Models**: Automatically discovers available models
+- **Configuration**: Set `OLLAMA_URL` environment variable (default: http://localhost:11434)
+- **Usage**: Add models through the LLM Config page in the web interface
+
+#### OpenAI/ChatGPT
+- **Setup**: Obtain API key from OpenAI
+- **Models**: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
+- **Configuration**: Set `OPENAI_API_KEY` environment variable
+- **Usage**: Add models through the LLM Config page in the web interface
+
+### LLM Configuration via Web Interface
+
+1. Navigate to the **LLM Config** page in the web interface
+2. View connection status for Ollama and OpenAI
+3. Browse available models from all providers
+4. Add models to your configuration
+5. Manage configured models (add/remove)
+
+### LLM Analysis Process
+
+When LLM analysis is enabled:
+1. System checks for configured LLM models in the database
+2. Each image is analyzed by all configured models
+3. Results are stored with model-specific information
+4. All LLM results are saved to the database and JSON files
+
 ## 🌐 Web Interface
 
 The web interface provides a modern, user-friendly way to interact with the image analysis system:
@@ -177,6 +313,7 @@ The web interface provides a modern, user-friendly way to interact with the imag
 - **Process**: Start and monitor image processing
 - **Results**: View, search, and download analysis results
 - **Config**: Manage system configuration settings
+- **LLM Config**: Configure and manage LLM models (Ollama, OpenAI, ChatGPT)
 
 ## 📁 Project Structure
 
@@ -195,7 +332,8 @@ GIT_CLIP_Analysis/
 │   ├── viewers/             # Results viewing tools
 │   │   ├── __init__.py
 │   │   ├── results_viewer.py    # Command-line viewer
-│   │   ├── web_interface.py     # Flask web application
+│   │   ├── web_interface.py     # Legacy Flask web application
+│   │   ├── web_interface_refactored.py  # Refactored web application
 │   │   └── templates/           # HTML templates
 │   │       ├── base.html
 │   │       ├── dashboard.html
