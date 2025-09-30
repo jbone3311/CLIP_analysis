@@ -30,8 +30,8 @@ logger = setup_global_logging()
 error_handler = setup_global_error_handling(logger)
 
 # Import after environment loading
-from directory_processor import DirectoryProcessor
-from src.viewers.web_interface_refactored import WebInterface
+from src.processors.directory_processor import DirectoryProcessor
+from src.viewers.web_interface import WebInterface
 import src.config.config_manager as config_manager
 from src.analyzers.llm_manager import LLMManager
 from src.database.db_manager import DatabaseManager

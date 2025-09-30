@@ -46,10 +46,44 @@ class TestResultsViewer(unittest.TestCase):
                     "best": {"prompt": "A beautiful landscape"},
                     "fast": {"prompt": "Nature scene"}
                 },
-                "llm": {
-                    "P1": {"content": "Detailed description"},
-                    "P2": {"content": "Art critique"}
-                },
+                "llm": [
+                    {
+                        "prompt": "P1",
+                        "status": "success",
+                        "result": {
+                            "choices": [
+                                {
+                                    "message": {
+                                        "content": "Detailed description"
+                                    }
+                                }
+                            ],
+                            "usage": {
+                                "prompt_tokens": 10,
+                                "completion_tokens": 20,
+                                "total_tokens": 30
+                            }
+                        }
+                    },
+                    {
+                        "prompt": "P2",
+                        "status": "success",
+                        "result": {
+                            "choices": [
+                                {
+                                    "message": {
+                                        "content": "Art critique"
+                                    }
+                                }
+                            ],
+                            "usage": {
+                                "prompt_tokens": 15,
+                                "completion_tokens": 25,
+                                "total_tokens": 40
+                            }
+                        }
+                    }
+                ],
                 "metadata": {
                     "width": 1920,
                     "height": 1080,
@@ -112,8 +146,10 @@ class TestResultsViewer(unittest.TestCase):
         files = find_analysis_files(self.test_output_dir)
         
         self.assertEqual(len(files), 2)
-        self.assertIn("test_image_analysis.json", files)
-        self.assertIn("image2_analysis.json", files)
+        # Check that the files exist in the list (they will be full paths)
+        file_names = [os.path.basename(f) for f in files]
+        self.assertIn("test_image_analysis.json", file_names)
+        self.assertIn("image2_analysis.json", file_names)
         self.assertNotIn("not_analysis.txt", files)
     
     def test_find_analysis_files_empty_directory(self):
@@ -145,16 +181,20 @@ class TestResultsViewer(unittest.TestCase):
         """Test exporting results"""
         output_file = os.path.join(self.temp_dir, "export.json")
         
-        result = export_results(self.test_output_dir, output_file, "json")
-        
-        self.assertTrue(result)
-        self.assertTrue(os.path.exists(output_file))
-        
-        # Check JSON content
-        with open(output_file, 'r') as f:
-            data = json.load(f)
-            self.assertIsInstance(data, dict)
-            self.assertIn("summary", data)
+        # Mock the find_analysis_files function to return our test file
+        with patch('src.viewers.results_viewer.find_analysis_files') as mock_find:
+            mock_find.return_value = [self.test_file_path]
+            
+            result = export_results(self.test_output_dir, output_file, "json")
+            
+            self.assertTrue(result)
+            self.assertTrue(os.path.exists(output_file))
+            
+            # Check JSON content
+            with open(output_file, 'r') as f:
+                data = json.load(f)
+                self.assertIsInstance(data, dict)
+                self.assertIn("summary", data)
     
     @patch('src.viewers.results_viewer.find_analysis_files')
     @patch('src.viewers.results_viewer.load_analysis_file')

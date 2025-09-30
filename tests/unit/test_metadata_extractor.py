@@ -18,7 +18,21 @@ class TestMetadataExtractor(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.test_image_path = "test_image.jpg"
+        import tempfile
+        import shutil
+        
+        # Create temporary directory
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_image_path = os.path.join(self.temp_dir, "test_image.jpg")
+        
+        # Create a dummy image file
+        with open(self.test_image_path, 'wb') as f:
+            f.write(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x11\x08\x00\x01\x00\x01\x01\x01\x11\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xaa\xff\xd9')
+    
+    def tearDown(self):
+        """Clean up test fixtures"""
+        import shutil
+        shutil.rmtree(self.temp_dir)
     
     @patch('src.analyzers.metadata_extractor.Image.open')
     def test_extract_metadata_success(self, mock_image_open):
@@ -65,7 +79,8 @@ class TestMetadataExtractor(unittest.TestCase):
         self.assertIn("not found", result["error"])
     
     @patch('src.analyzers.metadata_extractor.extract_metadata')
-    def test_process_image_file_success(self, mock_extract):
+    @patch('src.analyzers.metadata_extractor.save_metadata_to_json')
+    def test_process_image_file_success(self, mock_save, mock_extract):
         """Test process_image_file function with success"""
         # Mock successful metadata extraction
         mock_extract.return_value = {
@@ -76,23 +91,31 @@ class TestMetadataExtractor(unittest.TestCase):
             "file_size": 1024000
         }
         
-        # Test with output directory
-        output_dir = "test_output"
+        # Create output directory
+        output_dir = os.path.join(self.temp_dir, "test_output")
+        os.makedirs(output_dir, exist_ok=True)
+        
         process_image_file(self.test_image_path, output_dir)
         
         mock_extract.assert_called_once_with(self.test_image_path)
+        mock_save.assert_called_once()
     
     @patch('src.analyzers.metadata_extractor.extract_metadata')
-    def test_process_image_file_error(self, mock_extract):
+    @patch('src.analyzers.metadata_extractor.save_metadata_to_json')
+    def test_process_image_file_error(self, mock_save, mock_extract):
         """Test process_image_file function with error"""
         # Mock metadata extraction error
         mock_extract.return_value = {"error": "Test error"}
         
-        # Test with output directory
-        output_dir = "test_output"
+        # Create output directory
+        output_dir = os.path.join(self.temp_dir, "test_output")
+        os.makedirs(output_dir, exist_ok=True)
+        
         process_image_file(self.test_image_path, output_dir)
         
         mock_extract.assert_called_once_with(self.test_image_path)
+        # Should still try to save even with error
+        mock_save.assert_called_once()
     
     @patch('src.analyzers.metadata_extractor.Image.open')
     def test_extract_metadata_with_different_formats(self, mock_image_open):

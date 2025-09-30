@@ -1,0 +1,58 @@
+{
+  "P1": {
+    "TITLE": "Comprehensive Image Analysis",
+    "PROMPT_TEXT": "Provide a comprehensive analysis of this image covering all aspects:\n\n1. **Main Subject & Composition**: Identify the primary focus, composition style, and visual hierarchy.\n\n2. **Detailed Object Inventory**: List EVERY distinct object, person, animal, structure, or element visible. For each item, provide:\n   - Name/description\n   - Approximate location (foreground/middle/background, left/center/right)\n   - Size relative to frame\n   - Any notable details or characteristics\n\n3. **Color Analysis**:\n   - List all prominent colors with hex codes\n   - Describe the overall color palette/theme\n   - Note any color relationships or contrasts\n   - Identify dominant vs. accent colors\n\n4. **Artistic Elements**:\n   - Identify any artistic styles, movements, or influences\n   - Note composition techniques used\n   - Describe lighting and mood\n   - Mention any technical aspects (perspective, depth, etc.)\n\n5. **Context & Atmosphere**:\n   - Describe the setting and time period\n   - Note any cultural or historical elements\n   - Describe the overall mood or atmosphere\n\nOutput as structured JSON with sections for objects, colors, artistic_influences, and general_analysis.",
+    "TEMPERATURE": 0.7,
+    "MAX_TOKENS": 4000,
+    "CATEGORY": "comprehensive"
+  },
+  "P2": {
+    "TITLE": "Detailed Object Detection & Tagging",
+    "PROMPT_TEXT": "Analyze this image and create a comprehensive list of EVERY visible object, person, animal, or element. For each item:\n\n1. **Object Name**: Use specific, descriptive names\n2. **Category**: Classify as person, animal, object, structure, plant, vehicle, clothing, etc.\n3. **Location**: Specify position (foreground/middle/background, left/center/right)\n4. **Size**: Relative size (small, medium, large, dominant)\n5. **Color**: Primary color(s) of the item\n6. **Details**: Any notable characteristics, condition, or features\n7. **Quantity**: How many of this item (if multiple)\n\nOutput as a JSON array of objects with these fields:\n{\n  \"objects\": [\n    {\n      \"name\": \"object name\",\n      \"category\": \"category\",\n      \"location\": \"position\",\n      \"size\": \"size\",\n      \"color\": \"color\",\n      \"details\": \"description\",\n      \"quantity\": number\n    }\n  ]\n}\n\nBe thorough and systematic - include even small or background elements.",
+    "TEMPERATURE": 0.5,
+    "MAX_TOKENS": 3000,
+    "CATEGORY": "detection"
+  },
+  "P3": {
+    "TITLE": "Color Palette & Theme Analysis",
+    "PROMPT_TEXT": "Perform a detailed color analysis of this image:\n\n1. **Individual Colors**:\n   - List every distinct color visible\n   - Provide hex codes for each color\n   - Estimate the percentage/area each color occupies\n   - Note any color variations or gradients\n\n2. **Color Relationships**:\n   - Identify complementary, analogous, or contrasting colors\n   - Note any color harmonies or discordances\n   - Describe how colors interact with each other\n\n3. **Overall Color Theme**:\n   - Describe the overall color palette (e.g., 'warm earth tones', 'cool blues', 'monochrome')\n   - Identify the dominant color family\n   - Note the color temperature (warm/cool/neutral)\n   - Describe the color saturation level\n\n4. **Color Psychology**:\n   - How do the colors contribute to the mood?\n   - What emotions or atmosphere do they convey?\n\nOutput as JSON:\n{\n  \"colors\": [\n    {\n      \"name\": \"color name\",\n      \"hex\": \"#hexcode\",\n      \"percentage\": number,\n      \"description\": \"details\"\n    }\n  ],\n  \"theme\": {\n    \"palette\": \"overall theme\",\n    \"dominant_family\": \"color family\",\n    \"temperature\": \"warm/cool/neutral\",\n    \"saturation\": \"level\",\n    \"mood\": \"emotional impact\"\n  }\n}",
+    "TEMPERATURE": 0.6,
+    "MAX_TOKENS": 2000,
+    "CATEGORY": "color"
+  },
+  "P4": {
+    "TITLE": "Artistic Influences & Style Analysis",
+    "PROMPT_TEXT": "Analyze this image for artistic influences, styles, and techniques:\n\n1. **Artistic Styles & Movements**:\n   - Identify any recognizable art styles (Impressionism, Cubism, Realism, etc.)\n   - Note any specific art movements that influenced this work\n   - Mention any regional or cultural artistic traditions\n\n2. **Artist Influences**:\n   - Suggest artists whose work this resembles\n   - Note specific techniques or approaches that echo known artists\n   - Mention any direct references or homages\n\n3. **Technical Analysis**:\n   - Composition techniques used (rule of thirds, golden ratio, etc.)\n   - Brushwork or rendering style\n   - Use of light and shadow\n   - Perspective and depth techniques\n\n4. **Historical Context**:\n   - Time period the style suggests\n   - Cultural or historical influences\n   - Any period-specific characteristics\n\nOutput as JSON:\n{\n  \"styles\": [\"style1\", \"style2\"],\n  \"artists\": [\"artist1\", \"artist2\"],\n  \"techniques\": [\"technique1\", \"technique2\"],\n  \"period\": \"time period\",\n  \"cultural_influences\": [\"influence1\", \"influence2\"]\n}",
+    "TEMPERATURE": 0.7,
+    "MAX_TOKENS": 2500,
+    "CATEGORY": "artistic"
+  },
+  "P5": {
+    "TITLE": "SDXL Style Recreation Prompt",
+    "PROMPT_TEXT": "Create a detailed prompt for Stable Diffusion XL that would recreate the style, composition, and mood of this image. Focus on:\n\n1. **Visual Style**:\n   - Artistic style and technique\n   - Rendering quality and approach\n   - Overall aesthetic\n\n2. **Composition**:\n   - Layout and arrangement\n   - Perspective and depth\n   - Focal points and visual flow\n\n3. **Color Palette**:\n   - Main colors and their relationships\n   - Overall color theme\n   - Lighting and atmosphere\n\n4. **Subject Matter**:\n   - Main subjects and objects\n   - Setting and environment\n   - Any specific details or characteristics\n\n5. **Mood & Atmosphere**:\n   - Emotional tone\n   - Lighting conditions\n   - Overall feeling\n\nOutput ONLY the prompt text, optimized for SDXL. Include relevant style modifiers, artists, and technical terms. Make it detailed enough to recreate the image's essence while being clear and specific.",
+    "TEMPERATURE": 0.6,
+    "MAX_TOKENS": 1500,
+    "CATEGORY": "generation"
+  },
+  "P6": {
+    "TITLE": "Technical Image Analysis",
+    "PROMPT_TEXT": "Provide a technical analysis of this image covering:\n\n1. **Image Quality**:\n   - Resolution and clarity\n   - Noise levels\n   - Sharpness and focus\n   - Dynamic range\n\n2. **Technical Parameters**:\n   - Estimated camera settings (if applicable)\n   - Lighting setup\n   - Depth of field\n   - Exposure characteristics\n\n3. **Composition Analysis**:\n   - Rule of thirds adherence\n   - Leading lines\n   - Symmetry or asymmetry\n   - Balance and visual weight\n\n4. **Processing & Effects**:\n   - Any post-processing effects\n   - Filters or adjustments applied\n   - Color grading\n   - Special effects or manipulations\n\nOutput as structured technical data suitable for database storage.",
+    "TEMPERATURE": 0.5,
+    "MAX_TOKENS": 2000,
+    "CATEGORY": "technical"
+  },
+  "P7": {
+    "TITLE": "Emotional & Psychological Analysis",
+    "PROMPT_TEXT": "Analyze the emotional and psychological impact of this image:\n\n1. **Emotional Response**:\n   - Primary emotions evoked\n   - Secondary emotional layers\n   - Mood and atmosphere\n   - Emotional intensity\n\n2. **Psychological Elements**:\n   - Symbolic meanings\n   - Archetypal elements\n   - Psychological themes\n   - Subconscious associations\n\n3. **Cultural & Social Context**:\n   - Cultural significance\n   - Social commentary\n   - Historical relevance\n   - Contemporary meaning\n\n4. **Personal Impact**:\n   - How different viewers might react\n   - Age and demographic considerations\n   - Personal vs. universal appeal\n\nOutput as structured analysis with emotional and psychological insights.",
+    "TEMPERATURE": 0.8,
+    "MAX_TOKENS": 2500,
+    "CATEGORY": "psychological"
+  },
+  "P8": {
+    "TITLE": "Database Tagging & Classification",
+    "PROMPT_TEXT": "Create comprehensive database tags and classifications for this image:\n\n1. **Primary Categories**:\n   - Main subject type\n   - Genre or style\n   - Medium or technique\n   - Time period\n\n2. **Detailed Tags**:\n   - All visible objects and subjects\n   - Colors and color themes\n   - Artistic styles and influences\n   - Technical characteristics\n   - Emotional qualities\n\n3. **Hierarchical Classification**:\n   - Broad categories\n   - Specific subcategories\n   - Related concepts\n   - Cross-references\n\n4. **Search Optimization**:\n   - Keywords for search\n   - Alternative terms\n   - Related concepts\n   - Synonyms and variations\n\nOutput as structured JSON with categories, tags, and classifications suitable for database storage and search functionality.",
+    "TEMPERATURE": 0.4,
+    "MAX_TOKENS": 3000,
+    "CATEGORY": "database"
+  }
+} 

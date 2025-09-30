@@ -1,0 +1,154 @@
+{
+  "models": [
+    {
+      "id": "gpt-4",
+      "title": "GPT-4",
+      "provider": "openai",
+      "model_name": "gpt-4",
+      "api_url": "https://api.openai.com/v1",
+      "enabled": true,
+      "description": "OpenAI's most advanced model"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "title": "GPT-3.5 Turbo",
+      "provider": "openai",
+      "model_name": "gpt-3.5-turbo",
+      "api_url": "https://api.openai.com/v1",
+      "enabled": true,
+      "description": "Fast and efficient OpenAI model"
+    },
+    {
+      "id": "claude-3-opus",
+      "title": "Claude 3 Opus",
+      "provider": "anthropic",
+      "model_name": "claude-3-opus-20240229",
+      "api_url": "https://api.anthropic.com/v1",
+      "enabled": false,
+      "description": "Anthropic's most capable model"
+    },
+    {
+      "id": "claude-3-sonnet",
+      "title": "Claude 3 Sonnet",
+      "provider": "anthropic",
+      "model_name": "claude-3-sonnet-20240229",
+      "api_url": "https://api.anthropic.com/v1",
+      "enabled": false,
+      "description": "Balanced performance and speed"
+    },
+    {
+      "id": "gemini-pro",
+      "title": "Gemini Pro",
+      "provider": "google",
+      "model_name": "gemini-pro",
+      "api_url": "https://generativelanguage.googleapis.com/v1",
+      "enabled": false,
+      "description": "Google's advanced language model"
+    },
+    {
+      "id": "grok-beta",
+      "title": "Grok Beta",
+      "provider": "grok",
+      "model_name": "grok-beta",
+      "api_url": "https://api.x.ai/v1",
+      "enabled": false,
+      "description": "xAI's conversational model"
+    },
+    {
+      "id": "command-r",
+      "title": "Command R",
+      "provider": "cohere",
+      "model_name": "command-r",
+      "api_url": "https://api.cohere.ai/v1",
+      "enabled": false,
+      "description": "Cohere's advanced model"
+    },
+    {
+      "id": "mistral-large",
+      "title": "Mistral Large",
+      "provider": "mistral",
+      "model_name": "mistral-large-latest",
+      "api_url": "https://api.mistral.ai/v1",
+      "enabled": false,
+      "description": "Mistral's most capable model"
+    },
+    {
+      "id": "llama2",
+      "title": "Llama 2",
+      "provider": "ollama",
+      "model_name": "llama2",
+      "api_url": "http://localhost:11434",
+      "enabled": false,
+      "description": "Local Llama 2 model via Ollama"
+    },
+    {
+      "id": "llama3",
+      "title": "Llama 3",
+      "provider": "ollama",
+      "model_name": "llama3",
+      "api_url": "http://localhost:11434",
+      "enabled": false,
+      "description": "Local Llama 3 model via Ollama"
+    },
+    {
+      "id": "mixtral",
+      "title": "Mixtral",
+      "provider": "ollama",
+      "model_name": "mixtral",
+      "api_url": "http://localhost:11434",
+      "enabled": false,
+      "description": "Local Mixtral model via Ollama"
+    },
+    {
+      "id": "perplexity-sonar",
+      "title": "Perplexity Sonar",
+      "provider": "perplexity",
+      "model_name": "sonar-medium-online",
+      "api_url": "https://api.perplexity.ai",
+      "enabled": false,
+      "description": "Perplexity's online model"
+    }
+  ],
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "api_key_env": "OPENAI_API_KEY",
+      "api_url_env": "OPENAI_URL"
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "api_url_env": "ANTHROPIC_URL"
+    },
+    "google": {
+      "name": "Google",
+      "api_key_env": "GOOGLE_API_KEY",
+      "api_url_env": "GOOGLE_URL"
+    },
+    "grok": {
+      "name": "Grok (xAI)",
+      "api_key_env": "GROK_API_KEY",
+      "api_url_env": "GROK_URL"
+    },
+    "cohere": {
+      "name": "Cohere",
+      "api_key_env": "COHERE_API_KEY",
+      "api_url_env": "COHERE_URL"
+    },
+    "mistral": {
+      "name": "Mistral",
+      "api_key_env": "MISTRAL_API_KEY",
+      "api_url_env": "MISTRAL_URL"
+    },
+    "perplexity": {
+      "name": "Perplexity",
+      "api_key_env": "PERPLEXITY_API_KEY",
+      "api_url_env": "PERPLEXITY_URL"
+    },
+    "ollama": {
+      "name": "Ollama",
+      "api_key_env": null,
+      "api_url_env": "OLLAMA_URL"
+    }
+  }
+} 

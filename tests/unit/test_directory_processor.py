@@ -14,7 +14,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from directory_processor import (
+from src.processors.directory_processor import (
     DirectoryProcessor,
     UnifiedAnalysisResult,
     ProgressTracker

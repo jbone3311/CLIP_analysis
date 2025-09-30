@@ -25,7 +25,7 @@ import pytest
 from flask import Flask
 from flask.testing import FlaskClient
 
-from src.viewers.web_interface_refactored import WebInterface
+from src.viewers.web_interface import WebInterface
 from src.database.db_manager import DatabaseManager
 from src.analyzers.llm_manager import LLMManager
 
@@ -56,7 +56,7 @@ class TestWebUIIntegration:
     @pytest.fixture
     def web_interface(self, temp_project_dir):
         """Create web interface instance for testing"""
-        with patch('src.viewers.web_interface_refactored.load_dotenv'):
+        with patch('src.viewers.web_interface.load_dotenv'):
             interface = WebInterface(temp_project_dir)
             return interface
     
@@ -82,7 +82,7 @@ WEB_PORT=5050
     
     def test_web_interface_creation(self, temp_project_dir):
         """Test that web interface can be created successfully"""
-        with patch('src.viewers.web_interface_refactored.load_dotenv'):
+        with patch('src.viewers.web_interface.load_dotenv'):
             interface = WebInterface(temp_project_dir)
             
             assert interface is not None

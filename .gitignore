@@ -49,6 +49,7 @@ Thumbs.db
 
 # Logs and databases
 *.log
+logs/
 *.sqlite3
 
 # Project-specific
@@ -273,8 +274,10 @@ cython_debug/
 # Project specific
 Output/
 *.json
-!config/prompts.json
-!LLM_Prompts.json
+!src/config/prompts.json
+!src/analyzers/LLM_Prompts.json
+!src/config/models.json
+.project-specific/
 
 # Logs
 *.log

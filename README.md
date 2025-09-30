@@ -332,8 +332,7 @@ GIT_CLIP_Analysis/
 │   ├── viewers/             # Results viewing tools
 │   │   ├── __init__.py
 │   │   ├── results_viewer.py    # Command-line viewer
-│   │   ├── web_interface.py     # Legacy Flask web application
-│   │   ├── web_interface_refactored.py  # Refactored web application
+│   │   ├── web_interface.py     # Flask web application
 │   │   └── templates/           # HTML templates
 │   │       ├── base.html
 │   │       ├── dashboard.html

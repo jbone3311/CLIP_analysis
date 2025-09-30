@@ -321,6 +321,50 @@ def validate_config(project_root: str = None) -> Dict[str, Any]:
     return issues
 
 
+def validate_api_key(api_key: str, api_url: str) -> bool:
+    """Validate an API key by making a test request"""
+    import requests
+    
+    if not api_key or api_key == "your_api_key_here":
+        return False
+    
+    try:
+        # Make a simple test request to validate the API key
+        headers = {"Authorization": f"Bearer {api_key}"}
+        response = requests.get(f"{api_url}/models", headers=headers, timeout=10)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def test_clip_connection(api_url: str) -> bool:
+    """Test connection to CLIP API"""
+    import requests
+    
+    try:
+        response = requests.get(f"{api_url}/", timeout=10)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def test_llm_connection(api_url: str, api_key: str, model_name: str) -> bool:
+    """Test connection to LLM API"""
+    import requests
+    
+    try:
+        headers = {"Authorization": f"Bearer {api_key}"}
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": "Hello"}],
+            "max_tokens": 10
+        }
+        response = requests.post(f"{api_url}/chat/completions", headers=headers, json=payload, timeout=10)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
 if __name__ == "__main__":
     # Interactive setup
     print("🔧 CLIP Analysis Configuration Setup")

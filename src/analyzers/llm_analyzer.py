@@ -34,6 +34,7 @@ import argparse
 import json
 import base64
 import sys
+import logging
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 import time

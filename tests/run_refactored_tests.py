@@ -22,7 +22,7 @@ def run_refactored_tests():
         'tests/unit/test_analysis_service.py',
         'tests/unit/test_image_service.py', 
         'tests/unit/test_config_service.py',
-        'tests/unit/test_web_interface_refactored.py'
+        'tests/unit/test_web_interface_refactored.py'  # Now tests web_interface.py
     ]
     
     # Load test suites

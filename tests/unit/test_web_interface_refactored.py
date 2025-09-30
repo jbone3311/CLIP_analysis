@@ -7,7 +7,7 @@ import tempfile
 import os
 import json
 from unittest.mock import patch, MagicMock
-from src.viewers.web_interface_refactored import WebInterface, create_app
+from src.viewers.web_interface import WebInterface, create_app
 
 
 class TestWebInterface(unittest.TestCase):

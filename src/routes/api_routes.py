@@ -159,7 +159,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_get():
         """Get all prompts"""
         try:
-            from src.api.prompts import load_prompts
+            from src.routes.prompts_routes import load_prompts
             prompts = load_prompts()
             return jsonify({
                 'success': True,
@@ -176,7 +176,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_get_one(prompt_id):
         """Get a specific prompt"""
         try:
-            from src.api.prompts import load_prompts
+            from src.routes.prompts_routes import load_prompts
             prompts = load_prompts()
             
             if prompt_id not in prompts:
@@ -199,7 +199,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_create():
         """Create a new prompt"""
         try:
-            from src.api.prompts import load_prompts, save_prompts, validate_prompt
+            from src.routes.prompts_routes import load_prompts, save_prompts, validate_prompt
             data = request.get_json()
             if not data:
                 return jsonify({
@@ -261,7 +261,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_update(prompt_id):
         """Update an existing prompt"""
         try:
-            from src.api.prompts import load_prompts, save_prompts, validate_prompt
+            from src.routes.prompts_routes import load_prompts, save_prompts, validate_prompt
             data = request.get_json()
             if not data:
                 return jsonify({
@@ -320,7 +320,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_delete(prompt_id):
         """Delete a prompt"""
         try:
-            from src.api.prompts import load_prompts, save_prompts
+            from src.routes.prompts_routes import load_prompts, save_prompts
             prompts = load_prompts()
             
             if prompt_id not in prompts:
@@ -353,7 +353,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_import():
         """Import prompts from JSON data"""
         try:
-            from src.api.prompts import load_prompts, save_prompts, validate_prompt
+            from src.routes.prompts_routes import load_prompts, save_prompts, validate_prompt
             data = request.get_json()
             if not data:
                 return jsonify({
@@ -408,7 +408,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_export():
         """Export all prompts as JSON"""
         try:
-            from src.api.prompts import load_prompts
+            from src.routes.prompts_routes import load_prompts
             from datetime import datetime
             prompts = load_prompts()
             return jsonify({
@@ -426,7 +426,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_test(prompt_id):
         """Test a prompt with an image"""
         try:
-            from src.api.prompts import load_prompts, generate_simulated_response
+            from src.routes.prompts_routes import load_prompts, generate_simulated_response
             prompts = load_prompts()
             
             if prompt_id not in prompts:
@@ -487,7 +487,7 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_prompts_stats():
         """Get statistics about prompts"""
         try:
-            from src.api.prompts import load_prompts
+            from src.routes.prompts_routes import load_prompts
             from datetime import datetime
             prompts = load_prompts()
             

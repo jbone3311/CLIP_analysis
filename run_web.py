@@ -13,7 +13,7 @@ load_dotenv()
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from src.viewers.web_interface_refactored import WebInterface
+from src.viewers.web_interface import WebInterface
 
 def main():
     """Run the refactored web interface"""
