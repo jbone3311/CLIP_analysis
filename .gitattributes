@@ -1,0 +1,88 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Configuration files
+*.txt text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# HTML files
+*.html text eol=lf
+
+# CSS files
+*.css text eol=lf
+
+# JavaScript files
+*.js text eol=lf
+
+# YAML files
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# SQL files
+*.sql text eol=lf
+
+# Log files (should be ignored, but if tracked)
+*.log text eol=lf
+
+# Database files (binary)
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# Image files (binary)
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.bmp binary
+*.tiff binary
+*.webp binary
+
+# Archive files (binary)
+*.zip binary
+*.tar.gz binary
+*.rar binary
+
+# Executable files (binary)
+*.exe binary
+*.dll binary
+*.so binary
+
+# Python compiled files (binary)
+*.pyc binary
+*.pyo binary
+
+# Virtual environment (should be ignored)
+venv/ export-ignore
+env/ export-ignore
+ENV/ export-ignore
+
+# IDE files (should be ignored)
+.vscode/ export-ignore
+.idea/ export-ignore
+*.swp export-ignore
+*.swo export-ignore
+
+# OS files (should be ignored)
+.DS_Store export-ignore
+Thumbs.db export-ignore
+
+# Project-specific files (should be ignored)
+.project-specific/ export-ignore
+logs/ export-ignore
+Output/ export-ignore
+Images/ export-ignore

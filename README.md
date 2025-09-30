@@ -17,6 +17,7 @@ A comprehensive image analysis system that combines CLIP (Contrastive Language-I
 - **📊 Results Viewer**: Interactive tool to explore and export analysis results
 - **⚙️ Configuration Helper**: Interactive setup wizard for easy configuration
 - **🛡️ Error Handling**: Comprehensive error handling with retry mechanisms
+- **🏗️ Modern Architecture**: Dependency injection, centralized utilities, and professional code structure
 
 ## 🚀 Quick Start
 
@@ -46,637 +47,321 @@ python main.py --help
 
 This will show an interactive menu with all available options.
 
-## ⚙️ Configuration
-
-The system uses a secure two-file configuration system:
-
-### Configuration Structure
-
-#### 🔑 Private Configuration (.env file)
-**Never commit this file to version control!** Contains sensitive information like API keys.
-
-Copy `env.sample` to `.env` and add your actual API keys:
-
-```bash
-# API Keys (Private - Keep Secret)
-OPENAI_API_KEY=your_actual_openai_api_key_here
-ANTHROPIC_API_KEY=your_actual_anthropic_api_key_here
-GOOGLE_API_KEY=your_actual_google_api_key_here
-OLLAMA_API_KEY=your_actual_ollama_api_key_here
-
-# API URLs (Private - Keep Secret)
-OPENAI_URL=https://api.openai.com/v1
-ANTHROPIC_URL=https://api.anthropic.com
-GOOGLE_URL=https://generativelanguage.googleapis.com
-OLLAMA_URL=http://localhost:11434
-
-# Database Configuration (Private)
-DATABASE_URL=sqlite:///image_analysis.db
-
-# Web Server Configuration (Private)
-WEB_PORT=5050
-SECRET_KEY=your_secret_key_here_change_this_in_production
-```
-
-#### ⚙️ Public Configuration (config.json)
-**Safe to commit to version control!** Contains application settings that can be shared.
-
-Copy `config.sample.json` to `config.json` and customize your settings:
-
-```json
-{
-  "clip_config": {
-    "api_base_url": "http://localhost:7860",
-    "model_name": "ViT-L-14/openai",
-    "enable_clip_analysis": true,
-    "clip_modes": ["best", "fast", "classic"],
-    "prompt_choices": ["P1", "P2", "P3", "P4", "P5"]
-  },
-  "analysis_features": {
-    "enable_llm_analysis": true,
-    "enable_metadata_extraction": true,
-    "enable_parallel_processing": true,
-    "generate_summaries": true,
-    "retry_limit": 3,
-    "timeout": 120
-  },
-  "ui_settings": {
-    "theme": "light",
-    "language": "en",
-    "auto_refresh": true,
-    "refresh_interval": 30
-  }
-}
-```
-
-#### 🤖 Model Configurations (src/config/models.json)
-Model configurations are managed separately in `src/config/models.json`:
-
-```json
-{
-  "models": [
-    {
-      "id": "gpt-4",
-      "title": "GPT-4",
-      "provider": "openai",
-      "model_name": "gpt-4",
-      "enabled": true
-    }
-  ]
-}
-```
-
-### Environment Variables
-
-#### Web Interface Settings
-- `WEB_PORT`: Port for the web interface (default: 5050)
-- `IMAGE_DIRECTORY`: Directory for uploaded images (default: Images)
-- `OUTPUT_DIRECTORY`: Directory for analysis results (default: Output)
-
-#### API Settings
-- `API_BASE_URL`: URL for CLIP analysis service (default: http://localhost:7860)
-- `CLIP_MODEL_NAME`: CLIP model to use (default: ViT-L-14/openai)
-
-#### Analysis Settings
-- `ENABLE_CLIP_ANALYSIS`: Enable CLIP analysis (default: True)
-- `ENABLE_LLM_ANALYSIS`: Enable LLM analysis (default: True)
-- `CLIP_MODES`: Comma-separated list of CLIP modes (default: best,fast)
-- `PROMPT_CHOICES`: Comma-separated list of prompt choices (default: P1,P2)
-
-#### API URLs (usually don't need to change)
-- `OPENAI_URL`: URL for OpenAI API (default: https://api.openai.com/v1)
-- `ANTHROPIC_URL`: URL for Anthropic API (default: https://api.anthropic.com/v1)
-- `GOOGLE_URL`: URL for Google API (default: https://generativelanguage.googleapis.com/v1)
-- `GROK_URL`: URL for Grok API (default: https://api.x.ai/v1)
-- `COHERE_URL`: URL for Cohere API (default: https://api.cohere.ai/v1)
-- `MISTRAL_URL`: URL for Mistral API (default: https://api.mistral.ai/v1)
-- `PERPLEXITY_URL`: URL for Perplexity API (default: https://api.perplexity.ai)
-- `OLLAMA_URL`: URL for Ollama server (default: http://localhost:11434)
-
-### Setup Configuration
-
-#### Quick Setup
-1. Copy the sample files:
-```bash
-cp env.sample .env
-cp config.sample.json config.json
-```
-
-2. Edit `.env` and add your actual API keys
-3. Edit `config.json` to customize your settings
-
-#### Interactive Setup
-Run the interactive configuration helper:
-
-```bash
-python main.py config
-```
-
-Or use the legacy command:
-
-```bash
-python src/config/config_manager.py
-```
-
-This will guide you through setting up:
-- **Private Settings**: Configure API keys and sensitive information (saved to `.env`)
-- **Public Settings**: Configure application features and preferences (saved to `config.json`)
-- **CLIP Configuration**: Set up CLIP analysis settings
-- **Directory Paths**: Configure image and output directories
-- **Processing Options**: Set up analysis features and options
-
-**Note**: Model configurations are managed separately in `src/config/models.json` and can be configured through the web interface.
-
-### 2. Add Images
-
-Place your images in the `Images` directory (or your configured image directory).
-
-### 3. Run Analysis
-
-#### Option A: Web Interface (Recommended)
-Start the web interface for an easy-to-use graphical interface:
-
-```bash
-python main.py web
-```
-
-Then open your browser to `http://localhost:5050` and:
-- Upload images via drag-and-drop
-- Start processing with one click
-- View results in a beautiful interface
-- Download analysis files
-
-#### Option B: Command Line
-```bash
-python main.py process
-```
-
-Or use the legacy command:
-
-```bash
-python directory_processor.py
-```
-
-### 4. View Results
-
-#### Option A: Web Interface
-Navigate to the Results page in the web interface for:
-- Interactive filtering and search
-- Quick preview of analysis results
-- Download individual or bulk results
-- Visual status indicators
-
-#### Option B: Command Line
-```bash
-# List all analysis files
-python main.py view --list
-
-# View a specific file
-python main.py view --file Output/image_analysis.json
-
-# Generate summary report
-python main.py view --summary
-
-# Export results to CSV
-python main.py view --export csv --output results.csv
-```
-
-Or use the legacy commands:
-
-```bash
-# List all analysis files
-python src/viewers/results_viewer.py --list
-
-# View a specific file
-python src/viewers/results_viewer.py --file Output/image_analysis.json
-```
-
-## 🤖 LLM Configuration
-
-The system supports multiple LLM providers for enhanced image analysis:
-
-### Supported LLM Providers
-
-#### Ollama (Local)
-- **Setup**: Install and run Ollama server locally
-- **Models**: Automatically discovers available models
-- **Configuration**: Set `OLLAMA_URL` environment variable (default: http://localhost:11434)
-- **Usage**: Add models through the LLM Config page in the web interface
-
-#### OpenAI/ChatGPT
-- **Setup**: Obtain API key from OpenAI
-- **Models**: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
-- **Configuration**: Set `OPENAI_API_KEY` environment variable
-- **Usage**: Add models through the LLM Config page in the web interface
-
-### LLM Configuration via Web Interface
-
-1. Navigate to the **LLM Config** page in the web interface
-2. View connection status for Ollama and OpenAI
-3. Browse available models from all providers
-4. Add models to your configuration
-5. Manage configured models (add/remove)
-
-### LLM Analysis Process
-
-When LLM analysis is enabled:
-1. System checks for configured LLM models in the database
-2. Each image is analyzed by all configured models
-3. Results are stored with model-specific information
-4. All LLM results are saved to the database and JSON files
-
-## 🌐 Web Interface
-
-The web interface provides a modern, user-friendly way to interact with the image analysis system:
-
-### Features
-- **📤 Drag & Drop Upload**: Easy image upload with support for multiple files
-- **📊 Real-time Dashboard**: Monitor system status and recent activity
-- **🔍 Interactive Results**: Search, filter, and explore analysis results
-- **⚙️ Configuration Management**: Web-based settings configuration
-- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
-- **🔄 Background Processing**: Start processing and continue browsing
-- **🌐 Auto Browser Opening**: Browser opens automatically when you start the web interface
-
-### Getting Started
-1. Start the web interface: `python main.py` (default) or `python main.py web`
-2. Your browser will open automatically to `http://localhost:5050` (configurable via `WEB_PORT` environment variable)
-3. Upload images using the Upload page
-4. Start processing from the Process page
-5. View results in the Results page
-6. Configure settings in the Config page
-
-### Web Interface Pages
-- **Dashboard**: Overview of system status and recent activity
-- **Upload**: Drag-and-drop image upload with folder organization
-- **Images**: Browse and manage uploaded images
-- **Process**: Start and monitor image processing
-- **Results**: View, search, and download analysis results
-- **Config**: Manage system configuration settings
-- **LLM Config**: Configure and manage LLM models (Ollama, OpenAI, ChatGPT)
-
 ## 📁 Project Structure
 
 ```
-GIT_CLIP_Analysis/
-├── src/                     # Source code package
-│   ├── __init__.py
-│   ├── analyzers/           # Analysis modules
-│   │   ├── __init__.py
-│   │   ├── clip_analyzer.py     # CLIP analysis
-│   │   ├── llm_analyzer.py      # LLM analysis
+CLIP_Analysis/
+├── src/                        # Main source code
+│   ├── analyzers/              # Analysis modules
+│   │   ├── clip_analyzer.py    # CLIP analysis
+│   │   ├── llm_analyzer.py     # LLM analysis
+│   │   ├── llm_manager.py      # LLM management
 │   │   └── metadata_extractor.py # Metadata extraction
-│   ├── config/              # Configuration management
-│   │   ├── __init__.py
-│   │   └── config_manager.py
-│   ├── viewers/             # Results viewing tools
-│   │   ├── __init__.py
-│   │   ├── results_viewer.py    # Command-line viewer
-│   │   ├── web_interface.py     # Flask web application
-│   │   └── templates/           # HTML templates
-│   │       ├── base.html
-│   │       ├── dashboard.html
-│   │       ├── upload.html
-│   │       ├── results.html
-│   │       ├── process.html
-│   │       ├── config.html
-│   │       ├── images.html
-│   │       └── result_detail.html
-│   └── utils/               # Utility functions
-│       ├── __init__.py
-│       └── installer.py
-├── tests/                   # Test suite
-│   ├── __init__.py
-│   ├── unit/                # Unit tests
-│   │   ├── __init__.py
-│   │   ├── test_clip_analyzer.py
-│   │   ├── test_llm_analyzer.py
-│   │   └── test_metadata_extractor.py
-│   ├── integration/         # Integration tests
-│   │   ├── __init__.py
-│   │   └── test_system.py
-│   ├── fixtures/            # Test data
-│   └── run_tests.py         # Test runner
-├── config/                  # Configuration files
-│   └── prompts.json         # LLM prompt definitions
-├── examples/                # Example scripts
-│   └── basic_usage.py
-├── docs/                    # Documentation
-├── Images/                  # Input image directory
-├── Output/                  # Analysis results directory
-├── main.py                  # Main entry point
-├── directory_processor.py   # Legacy main processor
-├── setup.py                 # Package setup
-├── requirements.txt         # Dependencies
-├── pytest.ini              # Test configuration
-├── Makefile                 # Development tasks
-├── .env                     # Configuration file (generated)
-└── README.md               # This file
+│   ├── config/                 # Configuration management
+│   │   ├── config_manager.py   # Config utilities
+│   │   ├── models.json         # LLM model definitions
+│   │   └── prompts.json        # Prompt templates
+│   ├── database/               # Database management
+│   │   └── db_manager.py       # Database operations
+│   ├── processors/             # Batch processing
+│   │   └── directory_processor.py # Main processor (with DI)
+│   ├── routes/                 # Web routes
+│   │   ├── api_routes.py       # API endpoints
+│   │   ├── main_routes.py      # Main routes
+│   │   └── prompts_routes.py   # Prompt management
+│   ├── services/               # Business logic
+│   │   ├── analysis_service.py # Analysis orchestration
+│   │   ├── clip_service.py     # CLIP API service
+│   │   ├── config_service.py   # Configuration service
+│   │   └── image_service.py    # Image handling
+│   ├── utils/                  # Utility functions
+│   │   ├── file_utils.py       # File operations
+│   │   ├── progress.py         # Progress tracking
+│   │   ├── logger.py           # Logging system
+│   │   ├── error_handler.py    # Error handling
+│   │   └── wildcard_generator.py # Wildcard generation
+│   └── viewers/                # Web interface
+│       ├── templates/           # HTML templates
+│       └── web_interface.py    # Flask application
+├── tests/                      # Test suite
+│   ├── run_tests.py           # Unified test runner
+│   ├── unit/                   # Unit tests
+│   ├── integration/           # Integration tests
+│   └── misc/                   # Miscellaneous tests
+├── scripts/                    # Utility scripts
+│   ├── check_db.py            # Database utilities
+│   ├── enable_clip.py         # CLIP setup
+│   ├── setup_env.py           # Environment setup
+│   └── ...
+├── logs/                       # Application logs
+├── Images/                     # Input images (not in git)
+├── Output/                     # Analysis results (not in git)
+├── main.py                     # CLI entry point
+├── run_web.py                  # Web interface launcher
+├── requirements.txt            # Python dependencies
+└── README.md                   # This file
 ```
 
-## 🔧 Configuration
+## ⚙️ Configuration
 
-The system uses a `.env` file for configuration. Key settings include:
-
-### Processing Settings
-- `ENABLE_PARALLEL_PROCESSING`: Enable parallel processing (default: False)
-- `ENABLE_METADATA_EXTRACTION`: Extract image metadata (default: True)
-- `FORCE_REPROCESS`: Force reprocessing of existing files (default: False)
-- `GENERATE_SUMMARIES`: Generate summary files (default: True)
-
-### CLIP Settings
-- `API_BASE_URL`: CLIP API endpoint (default: http://localhost:7860)
-- `CLIP_MODEL_NAME`: CLIP model to use (default: ViT-L-14/openai)
-- `ENABLE_CLIP_ANALYSIS`: Enable CLIP analysis (default: True)
-- `CLIP_MODES`: Analysis modes (default: best,fast)
-
-### LLM Settings
-- `ENABLE_LLM_ANALYSIS`: Enable LLM analysis (default: True)
-- `PROMPT_CHOICES`: Prompts to use (default: P1,P2)
-- `LLM_1_TITLE`, `LLM_1_API_URL`, `LLM_1_API_KEY`, `LLM_1_MODEL`: Model 1 configuration
-- (Repeat for additional models)
-
-### Directory Settings
-- `IMAGE_DIRECTORY`: Input image directory (default: Images)
-- `OUTPUT_DIRECTORY`: Output results directory (default: Output)
-
-## 📊 Data Structure
-
-Each image generates a unified JSON file with the following structure:
-
-```json
-{
-  "file_info": {
-    "filename": "image.jpg",
-    "directory": "Images",
-    "date_added": "2024-01-01T12:00:00",
-    "date_processed": "2024-01-01T12:01:30",
-    "md5": "abc123...",
-    "file_size": 1024000
-  },
-  "analysis": {
-    "clip": {
-      "best": {"prompt": "..."},
-      "fast": {"prompt": "..."}
-    },
-    "llm": [
-      {
-        "prompt": "P1",
-        "result": {...},
-        "status": "success"
-      }
-    ],
-    "metadata": {
-      "width": 1920,
-      "height": 1080,
-      "format": "JPEG",
-      "color_mode": "RGB"
-    }
-  },
-  "processing_info": {
-    "config_used": {...},
-    "processing_time": 45.2,
-    "status": "complete",
-    "errors": []
-  }
-}
-```
-
-## 🛠️ Usage Examples
-
-### Basic Processing
+The system uses environment variables for configuration. Copy `secure_env_example.txt` to `.env` and customize:
 
 ```bash
-# Process all images in the Images directory
-python directory_processor.py
+# API Configuration
+API_BASE_URL=http://localhost:7860
+CLIP_MODEL_NAME=ViT-L-14/openai
+
+# Analysis Settings
+ENABLE_CLIP_ANALYSIS=True
+ENABLE_LLM_ANALYSIS=True
+ENABLE_METADATA_EXTRACTION=True
+ENABLE_PARALLEL_PROCESSING=False
+
+# Directories
+IMAGE_DIRECTORY=Images
+OUTPUT_DIRECTORY=Output
+
+# CLIP Modes
+CLIP_MODES=best,fast,classic,negative,caption
+
+# LLM Configuration
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+
+# Web Interface
+WEB_PORT=5050
 ```
 
-### Standalone CLIP Analysis
+## 🧪 Testing
 
-```bash
-# Analyze a single image with CLIP
-python src/analyzers/clip_analyzer.py image.jpg --modes best fast --output result.json
-
-# Validate CLIP configuration
-python src/analyzers/clip_analyzer.py --validate
-```
-
-### Standalone LLM Analysis
-
-```bash
-# Analyze a single image with LLM
-python src/analyzers/llm_analyzer.py image.jpg --model 1 --prompt P1,P2 --output result.json
-
-# List available models
-python src/analyzers/llm_analyzer.py --list-models
-
-# List available prompts
-python src/analyzers/llm_analyzer.py --list-prompts
-```
-
-### Results Exploration
-
-```bash
-# List all analysis files
-python main.py view --list
-
-# View detailed results for a specific file
-python main.py view --file Output/image_analysis.json
-
-# Generate summary report
-python main.py view --summary --output summary.json
-
-# Export to CSV
-python main.py view --export csv --output results.csv
-```
-
-## 🔍 Supported Image Formats
-
-- PNG
-- JPG/JPEG
-- GIF
-- BMP
-- TIFF
-- WebP
-
-## 🤖 Supported LLM Models
-
-The system supports multiple LLM models simultaneously:
-
-1. **OpenAI GPT Models** (GPT-4, GPT-4o, etc.)
-2. **Anthropic Claude** (Claude-3, etc.)
-3. **Local Models** (Ollama, etc.)
-4. **Custom API Endpoints**
-
-## 📝 Available Prompts
-
-### P1: Detailed Image Description
-Comprehensive description following a structured approach covering main subject, setting, details, colors, composition, and more.
-
-### P2: Art Critique from Multiple Perspectives
-Analysis from different viewpoints: artist, gallery owner, curator, and various age groups.
-
-## ⚡ Performance Features
-
-- **Incremental Processing**: Only processes new or changed images
-- **Parallel Processing**: Optional multi-threaded processing
-- **Progress Tracking**: Real-time progress bars and ETA
-- **Error Recovery**: Automatic retry with exponential backoff
-- **Memory Efficient**: Processes images in chunks
-
-## 🔧 Advanced Configuration
-
-### Custom Prompts
-
-Edit `LLM_Prompts.json` to add custom prompts:
-
-```json
-{
-  "CUSTOM_PROMPT": {
-    "TITLE": "Custom Analysis",
-    "PROMPT_TEXT": "Your custom prompt here...",
-    "TEMPERATURE": 0.7,
-    "MAX_TOKENS": 1500
-  }
-}
-```
-
-### Environment Variables
-
-Set additional environment variables for fine-tuning:
-
-```bash
-LOGGING_LEVEL=DEBUG
-RETRY_LIMIT=10
-TIMEOUT=120
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **CLIP API Connection Failed**
-   - Check if CLIP API is running at the configured URL
-   - Verify network connectivity
-   - Check API endpoint configuration
-
-2. **LLM API Authentication Failed**
-   - Verify API keys are correct
-   - Check API endpoint URLs
-   - Ensure sufficient API credits
-
-3. **No Images Found**
-   - Verify image directory path
-   - Check file permissions
-   - Ensure images are in supported formats
-
-### Debug Mode
-
-Enable debug logging for detailed troubleshooting:
-
-```bash
-LOGGING_LEVEL=DEBUG python directory_processor.py
-```
-
-## 📈 Monitoring and Logs
-
-- **Console Output**: Real-time progress and status
-- **Log File**: Detailed logs saved to `processing.log`
-- **Results Viewer**: Interactive exploration of results
-- **Summary Reports**: Automated summary generation
-
-## 🧪 Testing and Development
-
-### Running Tests
+The project includes a comprehensive test suite with a unified test runner:
 
 ```bash
 # Run all tests
 python tests/run_tests.py
 
-# Run unit tests only
-python tests/run_tests.py unit
-
-# Run integration tests only
-python tests/run_tests.py integration
-
-# Run specific test
-python tests/run_tests.py specific clip_analyzer
+# Run specific test suites
+python tests/run_tests.py --unit          # Unit tests only
+python tests/run_tests.py --integration   # Integration tests
+python tests/run_tests.py --web           # Web interface tests
+python tests/run_tests.py --fast          # Quick tests only
+python tests/run_tests.py --verbose      # Verbose output
+python tests/run_tests.py --coverage      # With coverage report
 ```
 
-### Using Makefile (Development)
+## 🏗️ Architecture
+
+### Modern Design Patterns
+
+The codebase uses modern software engineering practices:
+
+- **Dependency Injection**: Core classes accept dependencies for better testability
+- **Centralized Utilities**: Common operations in `src/utils/`
+- **Service Layer**: Business logic separated from presentation
+- **Type Hints**: Comprehensive type annotations throughout
+- **Error Handling**: Centralized error handling with context
+
+### Example: Dependency Injection
+
+```python
+# Before (tightly coupled)
+processor = DirectoryProcessor(config)
+
+# After (dependency injection)
+db_manager = DatabaseManager()
+llm_manager = LLMManager()
+processor = DirectoryProcessor(config, db_manager, llm_manager)
+
+# For testing
+mock_db = Mock(spec=DatabaseManager)
+mock_llm = Mock(spec=LLMManager)
+processor = DirectoryProcessor(config, mock_db, mock_llm)
+```
+
+## 🔧 Development
+
+### Prerequisites
+
+- Python 3.8+
+- pip
+- Git
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/jbone3311/CLIP_analysis.git
+   cd CLIP_analysis
+   ```
+
+2. **Create virtual environment:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment:**
+   ```bash
+   cp secure_env_example.txt .env
+   # Edit .env with your API keys
+   ```
+
+5. **Run the application:**
+   ```bash
+   python main.py
+   ```
+
+### Development Tools
+
+- **Unified Test Runner**: `python tests/run_tests.py`
+- **Code Quality**: Type hints throughout
+- **Logging**: Centralized logging system
+- **Error Handling**: Comprehensive error context
+
+## 📊 Usage Examples
+
+### Web Interface
+
+1. Start the web server:
+   ```bash
+   python run_web.py
+   ```
+
+2. Open `http://localhost:5050` in your browser
+
+3. Upload images using the drag-and-drop interface
+
+4. Configure analysis settings
+
+5. Start processing
+
+6. View and download results
+
+### Command Line
 
 ```bash
-# Show all available commands
-make help
+# Process images in a directory
+python main.py process --input Images --output Output
 
-# Setup development environment
-make dev-setup
+# View results
+python main.py view --input Output
 
-# Run tests
-make test
+# Configure LLM models
+python main.py config llm
 
-# Format code
-make format
-
-# Run linting
-make lint
-
-# Quick development cycle
-make quick-test
+# Get help
+python main.py --help
 ```
 
-### Using pytest
+### Programmatic Usage
 
-```bash
-# Run all tests with pytest
-pytest
+```python
+from src.processors import DirectoryProcessor
+from src.database.db_manager import DatabaseManager
+from src.analyzers.llm_manager import LLMManager
 
-# Run with coverage
-pytest --cov=src --cov-report=html
+# Create dependencies
+db_manager = DatabaseManager()
+llm_manager = LLMManager()
 
-# Run specific test file
-pytest tests/unit/test_clip_analyzer.py
+# Configure
+config = {
+    'ENABLE_CLIP_ANALYSIS': True,
+    'ENABLE_LLM_ANALYSIS': True,
+    'IMAGE_DIRECTORY': 'Images',
+    'OUTPUT_DIRECTORY': 'Output'
+}
 
-# Run tests with markers
-pytest -m unit
-pytest -m integration
+# Process images
+processor = DirectoryProcessor(config, db_manager, llm_manager)
+processor.process_directory()
 ```
 
-## 🔄 Incremental Processing
+## 🛠️ Advanced Features
 
-The system automatically detects:
-- New images that haven't been processed
-- Modified images (using MD5 hash comparison)
-- Images with missing analysis types
+### Custom Progress Tracking
 
-Use `FORCE_REPROCESS=true` to reprocess all images.
+```python
+from src.utils import ProgressTracker
 
-## 📊 Output Organization
+def my_progress_callback(message):
+    print(f"Progress: {message}")
 
-Results are organized in the output directory:
-- `{filename}_analysis.json`: Complete analysis for each image
-- `clip_analysis_summary.json`: Summary of all CLIP results
-- `llm_analysis_summary.json`: Summary of all LLM results
-- `metadata_summary.json`: Summary of all metadata
+tracker = ProgressTracker(total=100, callback=my_progress_callback)
+# Use tracker in your batch operations
+```
+
+### File Operations
+
+```python
+from src.utils import compute_file_hash, find_image_files
+
+# Compute file hash
+md5_hash = compute_file_hash('image.jpg', algorithm='md5')
+
+# Find all images
+images = find_image_files('Images/', recursive=True)
+```
+
+### Error Handling
+
+```python
+from src.utils import handle_errors, ErrorCategory
+
+@handle_errors(ErrorCategory.API, max_retries=3)
+def api_call():
+    # Your API call here
+    pass
+```
+
+## 📈 Performance
+
+- **Incremental Processing**: Only processes new/changed images
+- **Parallel Processing**: Optional parallel execution
+- **Smart Caching**: Avoids redundant API calls
+- **Progress Tracking**: Real-time status updates
+- **Memory Efficient**: Processes images in batches
+
+## 🔒 Security
+
+- **API Key Management**: Secure environment variable storage
+- **Input Validation**: Comprehensive input sanitization
+- **Error Handling**: No sensitive data in error messages
+- **File Security**: Safe file operations with validation
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch: `git checkout -b feature-name`
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Run tests: `python tests/run_tests.py`
+5. Commit your changes: `git commit -m "Add feature"`
+6. Push to the branch: `git push origin feature-name`
+7. Submit a pull request
 
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
-- OpenAI for CLIP and GPT models
-- Anthropic for Claude models
-- The open-source community for various dependencies
+- CLIP model by OpenAI
+- Various LLM providers (OpenAI, Anthropic, Google)
+- Flask web framework
+- Python community
+
+## 📞 Support
+
+For issues and questions:
+- Create an issue on GitHub
+- Check the documentation in `.project-specific/`
+- Review the test suite for usage examples
 
 ---
 
-**Happy Image Analyzing! 🖼️✨**
+**Built with ❤️ using modern Python architecture and best practices.**
