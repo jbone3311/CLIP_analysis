@@ -3,7 +3,7 @@ import base64
 import os
 import json
 import argparse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import datetime
 import hashlib
@@ -34,6 +34,77 @@ EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "PROCESSING")
 # Initialize database manager
 db_manager = DatabaseManager()
 
+# Global session cache for authenticated requests
+_session_cache: Optional[requests.Session] = None
+_session_url: Optional[str] = None
+
+
+def get_authenticated_session(api_base_url: str, password: Optional[str] = None) -> requests.Session:
+    """
+    Get an authenticated session for the CLIP API.
+    
+    For Stable Diffusion Forge APIs that require Pinokio authentication,
+    this function logs in and returns a session with auth cookies.
+    
+    Args:
+        api_base_url: Base URL of the CLIP API
+        password: Optional password for authentication. If not provided,
+                 will try to get from CLIP_API_PASSWORD env variable
+    
+    Returns:
+        requests.Session: Authenticated session (or regular session if no auth needed)
+    """
+    global _session_cache, _session_url
+    
+    # Return cached session if we have one for this URL
+    if _session_cache and _session_url == api_base_url:
+        # Test if session is still valid
+        try:
+            test_response = _session_cache.get(f"{api_base_url}/info", timeout=5)
+            if test_response.status_code == 200:
+                logger.debug("Using cached authenticated session")
+                return _session_cache
+            else:
+                logger.debug("Cached session expired, re-authenticating")
+        except:
+            logger.debug("Cached session failed, re-authenticating")
+    
+    # Create new session
+    session = requests.Session()
+    
+    # Get password from env if not provided
+    if password is None:
+        password = os.getenv("CLIP_API_PASSWORD")
+    
+    # If password provided, attempt authentication
+    if password:
+        try:
+            logger.info("Authenticating with CLIP API...")
+            login_url = f"{api_base_url}/pinokio/login"
+            response = session.post(
+                login_url,
+                data={"password": password},
+                allow_redirects=True,
+                timeout=10
+            )
+            
+            # Check if we got a session cookie
+            if 'connect.sid' in session.cookies:
+                logger.info("✅ Successfully authenticated with CLIP API")
+                _session_cache = session
+                _session_url = api_base_url
+                return session
+            else:
+                logger.warning("No session cookie received, continuing without authentication")
+        except Exception as e:
+            logger.warning(f"Authentication failed: {e}. Continuing without authentication.")
+    else:
+        logger.debug("No password provided, using unauthenticated session")
+    
+    # Return regular session (no auth)
+    return session
+
+
 def encode_image_to_base64(image_path: str) -> str:
     """Encode image to base64 string with error handling"""
     try:
@@ -48,12 +119,29 @@ def encode_image_to_base64(image_path: str) -> str:
     except Exception as e:
         raise Exception(f"Failed to encode image {image_path}: {e}")
 
-def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str], timeout: int = 60) -> Dict[str, Any]:
-    """Generate prompts for an image using CLIP interrogator"""
+def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str], 
+                timeout: int = 60, password: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Generate prompts for an image using CLIP interrogator.
+    
+    Args:
+        image_path: Path to the image file
+        api_base_url: Base URL of the CLIP API
+        model: CLIP model name to use
+        modes: List of analysis modes (best, fast, classic, negative, caption)
+        timeout: Request timeout in seconds
+        password: Optional password for authentication
+    
+    Returns:
+        Dict with status and prompt results
+    """
     try:
         image_base64 = encode_image_to_base64(image_path)
         if not image_base64:
             return {"status": "error", "message": "Failed to encode image"}
+        
+        # Get authenticated session
+        session = get_authenticated_session(api_base_url, password)
         
         prompts = {}
         headers = {"Content-Type": "application/json"}
@@ -68,7 +156,7 @@ def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str
             logger.debug(f"Sending request to {api_base_url}/interrogator/prompt with mode: {mode}")
             
             try:
-                response = requests.post(
+                response = session.post(
                     f"{api_base_url}/interrogator/prompt",
                     headers=headers,
                     json=payload,
@@ -95,8 +183,24 @@ def prompt_image(image_path: str, api_base_url: str, model: str, modes: List[str
         logger.error(f"Failed to generate prompts: {e}")
         return {"status": "error", "message": str(e)}
 
-def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], force_reprocess: bool = False, progress_callback=None) -> Dict[str, Any]:
-    """Analyze an image using CLIP interrogator with comprehensive error handling and progress updates"""
+def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], 
+                           force_reprocess: bool = False, progress_callback=None, 
+                           password: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Analyze an image using CLIP interrogator with comprehensive error handling and progress updates.
+    
+    Args:
+        image_path: Path to the image file
+        api_base_url: Base URL of the CLIP API
+        model: CLIP model name to use
+        modes: List of analysis modes (best, fast, classic, negative, caption)
+        force_reprocess: Force reprocessing even if cached
+        progress_callback: Optional callback function for progress updates
+        password: Optional password for authentication
+    
+    Returns:
+        Dict with status and analysis results
+    """
     try:
         logger.info(f"Starting CLIP analysis for {image_path}")
         
@@ -109,6 +213,9 @@ def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, mode
         
         if not modes:
             return {"status": "error", "message": "No analysis modes specified"}
+        
+        # Get authenticated session
+        session = get_authenticated_session(api_base_url, password)
         
         # Read and encode image
         try:
@@ -139,9 +246,9 @@ def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, mode
                 "Content-Type": "application/json"
             }
 
-            # Make the API request
+            # Make the API request with authenticated session
             try:
-                response = requests.post(
+                response = session.post(
                     f"{api_base_url}/interrogator/analyze", 
                     headers=headers, 
                     json=payload,
@@ -193,8 +300,23 @@ def analyze_image_with_clip(image_path: str, api_base_url: str, model: str, mode
         logger.error(error_msg)
         return {"status": "error", "message": error_msg}
 
-def process_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], force_reprocess: bool = False) -> Dict[str, Any]:
-    """Process an image with CLIP analysis and return unified result structure with database integration"""
+def process_image_with_clip(image_path: str, api_base_url: str, model: str, modes: List[str], 
+                           force_reprocess: bool = False, password: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Process an image with CLIP analysis and return unified result structure with database integration.
+    
+    Args:
+        image_path: Path to the image file
+        api_base_url: Base URL of the CLIP API
+        model: CLIP model name to use
+        modes: List of analysis modes (best, fast, classic, negative, caption)
+        force_reprocess: Force reprocessing even if cached in database
+        password: Optional password for authentication. If not provided, 
+                 will try to get from CLIP_API_PASSWORD env variable
+    
+    Returns:
+        Dict with status and complete analysis results
+    """
     try:
         logger.info(f"Processing image with CLIP: {image_path}")
         
@@ -213,13 +335,13 @@ def process_image_with_clip(image_path: str, api_base_url: str, model: str, mode
                     "from_database": True
                 }
         
-        # Generate prompts
-        prompt_results = prompt_image(image_path, api_base_url, model, modes)
+        # Generate prompts (with authentication)
+        prompt_results = prompt_image(image_path, api_base_url, model, modes, password=password)
         if prompt_results.get("status") == "error":
             return {"status": "error", "message": f"Prompt generation failed: {prompt_results.get('message')}"}
 
-        # Perform image analysis
-        analysis_results = analyze_image_with_clip(image_path, api_base_url, model, modes)
+        # Perform image analysis (with authentication)
+        analysis_results = analyze_image_with_clip(image_path, api_base_url, model, modes, password=password)
         if analysis_results.get("status") == "error":
             return {"status": "error", "message": f"Analysis failed: {analysis_results.get('message')}"}
 
@@ -311,18 +433,28 @@ def validate_clip_config(api_base_url: str, model: str, modes: List[str]) -> Lis
 
 def main():
     """Main entry point for standalone CLIP analysis"""
-    parser = argparse.ArgumentParser(description="Process an image using the CLIP API.")
+    parser = argparse.ArgumentParser(
+        description="Process an image using the CLIP API (Supports authenticated Forge/Pinokio APIs)."
+    )
     parser.add_argument("image_path", type=str, help="Path to the image file.")
-    parser.add_argument("--api_base_url", type=str, default="http://localhost:7860", 
-                       help="Base URL of the CLIP API.")
-    parser.add_argument("--model", type=str, default="ViT-L-14", 
-                       help="Model name to use for analysis.")
-    parser.add_argument("--modes", type=str, nargs='+', default=["best", "fast"], 
-                       help="Modes for prompt generation.")
+    parser.add_argument("--api_base_url", type=str, 
+                       default=os.getenv("CLIP_API_URL", "http://localhost:7860"), 
+                       help="Base URL of the CLIP API (default from CLIP_API_URL env or http://localhost:7860).")
+    parser.add_argument("--model", type=str, 
+                       default=os.getenv("CLIP_MODEL_NAME", "ViT-L-14/openai"), 
+                       help="Model name to use for analysis (default from CLIP_MODEL_NAME env or ViT-L-14/openai).")
+    parser.add_argument("--modes", type=str, nargs='+', 
+                       default=os.getenv("CLIP_MODES", "best,fast").split(","), 
+                       help="Modes for prompt generation (default from CLIP_MODES env or 'best,fast').")
+    parser.add_argument("--password", type=str, 
+                       default=os.getenv("CLIP_API_PASSWORD"),
+                       help="Password for API authentication (default from CLIP_API_PASSWORD env).")
     parser.add_argument("--output", type=str, default="clip_output.json", 
                        help="Output JSON file.")
     parser.add_argument("--validate", action="store_true", 
                        help="Validate configuration before processing.")
+    parser.add_argument("--force", action="store_true",
+                       help="Force reprocessing even if result is cached.")
     
     args = parser.parse_args()
 
@@ -336,15 +468,26 @@ def main():
             return 1
         else:
             print("✅ Configuration is valid")
+            if args.password:
+                print("✅ Password provided for authentication")
             return 0
 
     # Process the image
     try:
-        result = process_image_with_clip(args.image_path, args.api_base_url, args.model, args.modes)
+        result = process_image_with_clip(
+            args.image_path, 
+            args.api_base_url, 
+            args.model, 
+            args.modes,
+            force_reprocess=args.force,
+            password=args.password
+        )
         
         if result.get("status") == "success":
             save_json(result, args.output)
             print(f"✅ CLIP analysis completed successfully")
+            if result.get("from_database"):
+                print(f"   (Retrieved from cache)")
             return 0
         else:
             print(f"❌ CLIP analysis failed: {result.get('message')}")
