@@ -56,4 +56,19 @@ MISTRAL_URL=https://api.mistral.ai/v1
 PERPLEXITY_URL=https://api.perplexity.ai
 
 # Ollama server URL
-OLLAMA_URL=http://localhost:11434 
+OLLAMA_URL=http://localhost:11434
+
+# =============================================================================
+# CLIP API Configuration
+# =============================================================================
+# CLIP API Base URL (change to your CLIP service endpoint)
+CLIP_API_URL=http://localhost:7860
+
+# CLIP Model Configuration
+CLIP_MODEL_NAME=ViT-L-14/openai
+
+# CLIP Analysis Modes (comma-separated: best,fast,classic,negative,caption)
+CLIP_MODES=best,fast,classic,negative,caption
+
+# CLIP API Timeout (seconds)
+CLIP_API_TIMEOUT=300 
