@@ -4,12 +4,13 @@ import json
 from typing import Optional, Dict, Any, List
 from src.utils.logger import get_global_logger
 from src.utils.error_handler import handle_errors, ErrorCategory, error_context
+from src.config.config_manager import get_config_value
 
 logger = get_global_logger()
 
 class DatabaseManager:
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or os.getenv('DATABASE_PATH', 'image_analysis.db')
+        self.db_path = db_path or get_config_value('DATABASE_PATH', 'image_analysis.db')
         logger.info(f"Initializing database: {self.db_path}")
         self.init_db()
 

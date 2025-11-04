@@ -107,9 +107,12 @@ CLIP_Analysis/
 The system uses environment variables for configuration. Copy `secure_env_example.txt` to `.env` and customize:
 
 ```bash
-# API Configuration
-API_BASE_URL=http://localhost:7860
-CLIP_MODEL_NAME=ViT-L-14/openai
+# CLIP API Configuration
+CLIP_API_URL=http://localhost:7860                # Change to your CLIP API endpoint
+CLIP_API_PASSWORD=                                 # Optional: Add if your API requires authentication
+CLIP_MODEL_NAME=ViT-L-14/openai                   # CLIP model to use
+CLIP_MODES=best,fast,classic,negative,caption      # Analysis modes
+CLIP_API_TIMEOUT=300                               # Request timeout (seconds)
 
 # Analysis Settings
 ENABLE_CLIP_ANALYSIS=True
@@ -120,9 +123,6 @@ ENABLE_PARALLEL_PROCESSING=False
 # Directories
 IMAGE_DIRECTORY=Images
 OUTPUT_DIRECTORY=Output
-
-# CLIP Modes
-CLIP_MODES=best,fast,classic,negative,caption
 
 # LLM Configuration
 OPENAI_API_KEY=your_openai_key_here

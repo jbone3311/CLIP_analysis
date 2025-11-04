@@ -36,6 +36,7 @@ from src.utils import (
     error_context,
     handle_errors
 )
+from src.config.config_manager import get_all_config
 
 # Get logger
 logger = get_global_logger()
@@ -528,22 +529,12 @@ def main() -> None:
     print("🖼️  Image Analysis with CLIP and LLM")
     print("=" * 50)
     
-    # Load configuration from environment variables
-    config = {
-        'API_BASE_URL': os.getenv('API_BASE_URL', 'http://localhost:7860'),
-        'CLIP_MODEL_NAME': os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai'),
-        'ENABLE_CLIP_ANALYSIS': os.getenv('ENABLE_CLIP_ANALYSIS', 'True') == 'True',
-        'ENABLE_LLM_ANALYSIS': os.getenv('ENABLE_LLM_ANALYSIS', 'True') == 'True',
-        'ENABLE_PARALLEL_PROCESSING': os.getenv('ENABLE_PARALLEL_PROCESSING', 'False') == 'True',
-        'ENABLE_METADATA_EXTRACTION': os.getenv('ENABLE_METADATA_EXTRACTION', 'True') == 'True',
-        'IMAGE_DIRECTORY': os.getenv('IMAGE_DIRECTORY', 'Images'),
-        'OUTPUT_DIRECTORY': os.getenv('OUTPUT_DIRECTORY', 'Output'),
-        'CLIP_MODES': [mode.strip() for mode in os.getenv('CLIP_MODES', 'best,fast,classic,negative,caption').split(',')],
-        'PROMPT_CHOICES': [p.strip() for p in os.getenv('PROMPT_CHOICES', 'P1,P2').split(',')],
-        'DEBUG': os.getenv('DEBUG', 'False') == 'True',
-        'FORCE_REPROCESS': os.getenv('FORCE_REPROCESS', 'False') == 'True',
-        'GENERATE_SUMMARIES': os.getenv('GENERATE_SUMMARIES', 'True') == 'True'
-    }
+    # Load configuration from centralized config manager
+    config = get_all_config()
+    
+    # Ensure legacy API_BASE_URL is set if CLIP_API_URL is present
+    if 'API_BASE_URL' not in config and 'CLIP_API_URL' in config:
+        config['API_BASE_URL'] = config['CLIP_API_URL']
 
     try:
         processor = DirectoryProcessor(config)

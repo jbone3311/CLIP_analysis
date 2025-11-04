@@ -279,10 +279,10 @@ def get_logger(name: str = None, config: Dict[str, Any] = None) -> AppLogger:
     # Load config from environment if not provided
     if config is None:
         config = {
-            'log_level': os.getenv('LOG_LEVEL', 'INFO'),
-            'log_file': os.getenv('LOG_FILE', 'app.log'),
-            'error_log_file': os.getenv('ERROR_LOG_FILE', 'errors.log'),
-            'max_size': int(os.getenv('LOG_MAX_SIZE', 10 * 1024 * 1024)),
+            'log_level': os.getenv('LOG_LEVEL', 'INFO'),  # Keep direct os.getenv for logger config
+            'log_file': os.getenv('LOG_FILE', 'app.log'),  # Keep direct os.getenv for logger config
+            'error_log_file': os.getenv('ERROR_LOG_FILE', 'errors.log'),  # Keep direct os.getenv for logger config
+            'max_size': int(os.getenv('LOG_MAX_SIZE', 10 * 1024 * 1024)),  # Keep direct os.getenv for logger config
             'backup_count': int(os.getenv('LOG_BACKUP_COUNT', 5))
         }
     

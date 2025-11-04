@@ -38,11 +38,23 @@ PERPLEXITY_API_KEY=your_perplexity_api_key_here
 # SQLite database file path
 DATABASE_PATH=image_analysis.db
 
+# Database URL (alternative to DATABASE_PATH)
+DATABASE_URL=sqlite:///image_analysis.db
+
 # =============================================================================
 # Security Configuration (Sensitive)
 # =============================================================================
 # Secret key for Flask sessions (change this in production!)
 FLASK_SECRET_KEY=your-secret-key-here-change-this-in-production
+
+# Additional secret key (change this in production!)
+SECRET_KEY=your_secret_key_here_change_this_in_production
+
+# =============================================================================
+# Web Server Configuration
+# =============================================================================
+# Web interface port
+WEB_PORT=5050
 
 # =============================================================================
 # API URLs (usually don't need to change)
@@ -64,6 +76,11 @@ OLLAMA_URL=http://localhost:11434
 # CLIP API Base URL (change to your CLIP service endpoint)
 CLIP_API_URL=http://localhost:7860
 
+# CLIP API Password (required for authenticated Forge/Pinokio APIs)
+# Leave empty if your CLIP API doesn't require authentication
+# Add your password here if needed
+CLIP_API_PASSWORD=
+
 # CLIP Model Configuration
 CLIP_MODEL_NAME=ViT-L-14/openai
 
@@ -71,4 +88,58 @@ CLIP_MODEL_NAME=ViT-L-14/openai
 CLIP_MODES=best,fast,classic,negative,caption
 
 # CLIP API Timeout (seconds)
-CLIP_API_TIMEOUT=300 
+CLIP_API_TIMEOUT=300
+
+# =============================================================================
+# Directory Configuration (Optional - defaults provided)
+# =============================================================================
+# Image input directory (default: Images)
+IMAGE_DIRECTORY=Images
+
+# Output directory for analysis results (default: Output)
+OUTPUT_DIRECTORY=Output
+
+# =============================================================================
+# Logging Configuration (Optional - defaults provided)
+# =============================================================================
+# Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=INFO
+
+# Log file path (default: app.log)
+LOG_FILE=app.log
+
+# Error log file path (default: errors.log)
+ERROR_LOG_FILE=errors.log
+
+# Maximum log file size in bytes (default: 10MB)
+LOG_MAX_SIZE=10485760
+
+# Number of backup log files to keep (default: 5)
+LOG_BACKUP_COUNT=5
+
+# =============================================================================
+# Analysis Configuration (Optional - defaults provided)
+# =============================================================================
+# Enable CLIP analysis (True/False)
+ENABLE_CLIP_ANALYSIS=True
+
+# Enable LLM analysis (True/False)
+ENABLE_LLM_ANALYSIS=True
+
+# Enable metadata extraction (True/False)
+ENABLE_METADATA_EXTRACTION=True
+
+# Enable parallel processing (True/False)
+ENABLE_PARALLEL_PROCESSING=False
+
+# Generate summaries (True/False)
+GENERATE_SUMMARIES=True
+
+# Force reprocessing even if cached (True/False)
+FORCE_REPROCESS=False
+
+# Enable debug mode (True/False)
+DEBUG=False
+
+# Prompt choices (comma-separated: P1,P2,P3,P4,P5)
+PROMPT_CHOICES=P1,P2

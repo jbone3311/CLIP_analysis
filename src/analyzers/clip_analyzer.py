@@ -9,9 +9,8 @@ import datetime
 import hashlib
 import sys
 
-# Add src to path for database imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from database.db_manager import DatabaseManager
+# Import database
+from src.database.db_manager import DatabaseManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,16 +19,17 @@ load_dotenv()
 from src.utils.logger import get_global_logger
 from src.utils.error_handler import ErrorCategory, error_context, handle_errors
 from src.utils.debug_utils import debug_function, log_api_calls
+from src.config.config_manager import get_config_value
 
 # Get logger
 logger = get_global_logger()
 
 # Load status messages from .env or set default words
-EMOJI_SUCCESS = os.getenv("EMOJI_SUCCESS", "SUCCESS")
-EMOJI_WARNING = os.getenv("EMOJI_WARNING", "WARNING")
-EMOJI_ERROR = os.getenv("EMOJI_ERROR", "ERROR")
-EMOJI_INFO = os.getenv("EMOJI_INFO", "INFO")
-EMOJI_PROCESSING = os.getenv("EMOJI_PROCESSING", "PROCESSING")
+EMOJI_SUCCESS = get_config_value("EMOJI_SUCCESS", "SUCCESS")
+EMOJI_WARNING = get_config_value("EMOJI_WARNING", "WARNING")
+EMOJI_ERROR = get_config_value("EMOJI_ERROR", "ERROR")
+EMOJI_INFO = get_config_value("EMOJI_INFO", "INFO")
+EMOJI_PROCESSING = get_config_value("EMOJI_PROCESSING", "PROCESSING")
 
 # Initialize database manager
 db_manager = DatabaseManager()
@@ -72,9 +72,9 @@ def get_authenticated_session(api_base_url: str, password: Optional[str] = None)
     # Create new session
     session = requests.Session()
     
-    # Get password from env if not provided
+    # Get password from config if not provided
     if password is None:
-        password = os.getenv("CLIP_API_PASSWORD")
+        password = get_config_value("CLIP_API_PASSWORD")
     
     # If password provided, attempt authentication
     if password:
@@ -438,16 +438,16 @@ def main():
     )
     parser.add_argument("image_path", type=str, help="Path to the image file.")
     parser.add_argument("--api_base_url", type=str, 
-                       default=os.getenv("CLIP_API_URL", "http://localhost:7860"), 
+                       default=get_config_value("CLIP_API_URL", "http://localhost:7860"), 
                        help="Base URL of the CLIP API (default from CLIP_API_URL env or http://localhost:7860).")
     parser.add_argument("--model", type=str, 
-                       default=os.getenv("CLIP_MODEL_NAME", "ViT-L-14/openai"), 
+                       default=get_config_value("CLIP_MODEL_NAME", "ViT-L-14/openai"), 
                        help="Model name to use for analysis (default from CLIP_MODEL_NAME env or ViT-L-14/openai).")
     parser.add_argument("--modes", type=str, nargs='+', 
-                       default=os.getenv("CLIP_MODES", "best,fast").split(","), 
+                       default=get_config_value("CLIP_MODES", ["best", "fast"]), 
                        help="Modes for prompt generation (default from CLIP_MODES env or 'best,fast').")
     parser.add_argument("--password", type=str, 
-                       default=os.getenv("CLIP_API_PASSWORD"),
+                       default=get_config_value("CLIP_API_PASSWORD"),
                        help="Password for API authentication (default from CLIP_API_PASSWORD env).")
     parser.add_argument("--output", type=str, default="clip_output.json", 
                        help="Output JSON file.")

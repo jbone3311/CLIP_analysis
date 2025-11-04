@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from src.utils.logger import get_global_logger
 from src.utils.error_handler import handle_errors, ErrorCategory, error_context
 from src.utils.debug_utils import debug_function, log_api_calls
+from src.config.config_manager import get_config_value
 
 load_dotenv()
 logger = get_global_logger()
@@ -15,35 +16,35 @@ class LLMManager:
     
     def __init__(self):
         # Ollama configuration
-        self.ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+        self.ollama_url = get_config_value('OLLAMA_URL', 'http://localhost:11434')
         
         # OpenAI configuration
-        self.openai_api_key = os.getenv('OPENAI_API_KEY')
-        self.openai_url = os.getenv('OPENAI_URL', 'https://api.openai.com/v1')
+        self.openai_api_key = get_config_value('OPENAI_API_KEY')
+        self.openai_url = get_config_value('OPENAI_URL', 'https://api.openai.com/v1')
         
         # Anthropic configuration
-        self.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-        self.anthropic_url = os.getenv('ANTHROPIC_URL', 'https://api.anthropic.com/v1')
+        self.anthropic_api_key = get_config_value('ANTHROPIC_API_KEY')
+        self.anthropic_url = get_config_value('ANTHROPIC_URL', 'https://api.anthropic.com/v1')
         
         # Google configuration
-        self.google_api_key = os.getenv('GOOGLE_API_KEY')
-        self.google_url = os.getenv('GOOGLE_URL', 'https://generativelanguage.googleapis.com/v1')
+        self.google_api_key = get_config_value('GOOGLE_API_KEY')
+        self.google_url = get_config_value('GOOGLE_URL', 'https://generativelanguage.googleapis.com/v1')
         
         # Grok configuration (xAI)
-        self.grok_api_key = os.getenv('GROK_API_KEY')
-        self.grok_url = os.getenv('GROK_URL', 'https://api.x.ai/v1')
+        self.grok_api_key = get_config_value('GROK_API_KEY')
+        self.grok_url = get_config_value('GROK_URL', 'https://api.x.ai/v1')
         
         # Cohere configuration
-        self.cohere_api_key = os.getenv('COHERE_API_KEY')
-        self.cohere_url = os.getenv('COHERE_URL', 'https://api.cohere.ai/v1')
+        self.cohere_api_key = get_config_value('COHERE_API_KEY')
+        self.cohere_url = get_config_value('COHERE_URL', 'https://api.cohere.ai/v1')
         
         # Mistral configuration
-        self.mistral_api_key = os.getenv('MISTRAL_API_KEY')
-        self.mistral_url = os.getenv('MISTRAL_URL', 'https://api.mistral.ai/v1')
+        self.mistral_api_key = get_config_value('MISTRAL_API_KEY')
+        self.mistral_url = get_config_value('MISTRAL_URL', 'https://api.mistral.ai/v1')
         
         # Perplexity configuration
-        self.perplexity_api_key = os.getenv('PERPLEXITY_API_KEY')
-        self.perplexity_url = os.getenv('PERPLEXITY_URL', 'https://api.perplexity.ai')
+        self.perplexity_api_key = get_config_value('PERPLEXITY_API_KEY')
+        self.perplexity_url = get_config_value('PERPLEXITY_URL', 'https://api.perplexity.ai')
         
     @handle_errors(category=ErrorCategory.API)
     def get_ollama_models(self) -> List[Dict[str, Any]]:

@@ -35,28 +35,11 @@ from src.viewers.web_interface import WebInterface
 import src.config.config_manager as config_manager
 from src.analyzers.llm_manager import LLMManager
 from src.database.db_manager import DatabaseManager
+from src.config.config_manager import get_all_config
 
 def get_default_config() -> Dict[str, Any]:
-    """Get default configuration with environment variable fallbacks"""
-    return {
-        'API_BASE_URL': os.getenv('API_BASE_URL', 'http://localhost:7860'),
-        'CLIP_MODEL_NAME': os.getenv('CLIP_MODEL_NAME', 'ViT-L-14/openai'),
-        'ENABLE_CLIP_ANALYSIS': os.getenv('ENABLE_CLIP_ANALYSIS', 'True') == 'True',
-        'ENABLE_LLM_ANALYSIS': os.getenv('ENABLE_LLM_ANALYSIS', 'True') == 'True',
-        'ENABLE_METADATA_EXTRACTION': os.getenv('ENABLE_METADATA_EXTRACTION', 'True') == 'True',
-        'ENABLE_PARALLEL_PROCESSING': os.getenv('ENABLE_PARALLEL_PROCESSING', 'False') == 'True',
-        'FORCE_REPROCESS': os.getenv('FORCE_REPROCESS', 'False') == 'True',
-        'GENERATE_SUMMARIES': os.getenv('GENERATE_SUMMARIES', 'True') == 'True',
-        'DEBUG': os.getenv('DEBUG', 'False') == 'True',
-        'IMAGE_DIRECTORY': os.getenv('IMAGE_DIRECTORY', 'Images'),
-        'OUTPUT_DIRECTORY': os.getenv('OUTPUT_DIRECTORY', 'Output'),
-        'WEB_PORT': int(os.getenv('WEB_PORT', '5050')),
-        'CLIP_MODES': os.getenv('CLIP_MODES', 'best,fast,classic,negative,caption').split(','),
-        'PROMPT_CHOICES': os.getenv('PROMPT_CHOICES', 'P1,P2').split(','),
-        'OLLAMA_URL': os.getenv('OLLAMA_URL', 'http://localhost:11434'),
-        'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', ''),
-        'OPENAI_URL': os.getenv('OPENAI_URL', 'https://api.openai.com/v1'),
-    }
+    """Get default configuration using centralized config manager"""
+    return get_all_config()
 
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser with all available options"""

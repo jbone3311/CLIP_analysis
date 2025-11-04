@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-XX
+
+### Added
+
+#### 🔐 CLIP API Authentication
+- **Forge/Pinokio Authentication**: Full support for password-protected CLIP APIs
+- **Session Management**: Smart session caching and re-authentication
+- **Environment Configuration**: `CLIP_API_PASSWORD` environment variable support
+- **Documentation**: Comprehensive guides for authenticated CLIP usage
+  - `AUTHENTICATED_CLIP_USAGE.md` - Complete usage guide
+  - `CLIP_API_GUIDE.md` - API reference documentation
+  - `PINOKIO_API_SETUP.md` - Pinokio-specific setup guide
+  - `CLIP_API_TEST_RESULTS.md` - Test findings and troubleshooting
+
+#### 🧪 Testing Tools
+- **CLIP API Test Scripts**: `scripts/test_clip_api.py` and `scripts/test_clip_api_auth.py`
+- **Authentication Testing**: Automated testing for authenticated endpoints
+
+### Fixed
+
+#### 🐛 Critical Bugs
+- **Import Fix**: Fixed broken import in `clip_analyzer.py` (`database.db_manager` → `src.database.db_manager`)
+- **Configuration**: Added missing `CLIP_API_PASSWORD` to `secure_env_example.txt`
+- **Setup URLs**: Updated `setup.py` with correct GitHub repository URLs
+
+### Changed
+
+#### 📚 Documentation Updates
+- **Environment Template**: Added `CLIP_API_PASSWORD` to example configuration
+- **Setup Metadata**: Corrected package URLs in `setup.py`
+
 ## [2.0.0] - 2025-09-30
 
 ### 🎉 Major Refactoring Release
