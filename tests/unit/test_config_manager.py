@@ -14,12 +14,11 @@ import shutil
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from src.config.config_manager import (
-    validate_api_key, 
-    test_clip_connection, 
-    test_llm_connection,
-    save_config,
-    load_config,
-    main
+    get_config_value,
+    get_all_config,
+    save_config_file,
+    load_config_file,
+    load_env_file
 )
 
 class TestConfigManager(unittest.TestCase):

@@ -10,10 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Image Analysis Team", email = "team@example.com"}
-]
-maintainers = [
-    {name = "Image Analysis Team", email = "team@example.com"}
+    {name = "jbone3311"}
 ]
 keywords = [
     "image analysis",
@@ -68,7 +65,6 @@ test = [
 Homepage = "https://github.com/jbone3311/CLIP_analysis"
 Documentation = "https://github.com/jbone3311/CLIP_analysis#readme"
 Repository = "https://github.com/jbone3311/CLIP_analysis"
-"Bug Reports" = "https://github.com/jbone3311/CLIP_analysis/issues"
 
 [project.scripts]
 image-analysis = "main:main"

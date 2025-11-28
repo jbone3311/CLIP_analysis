@@ -266,7 +266,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Quick preview functionality
 function showQuickPreview(filename) {
-    const modal = new bootstrap.Modal(document.getElementById('quickPreviewModal'));
+    const modalElement = document.getElementById('quickPreviewModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    
     const content = document.getElementById('quickPreviewContent');
     const viewFullBtn = document.getElementById('viewFullBtn');
     

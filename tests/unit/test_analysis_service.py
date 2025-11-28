@@ -111,16 +111,33 @@ class TestAnalysisService(unittest.TestCase):
         self.assertEqual(stats['completed_analyses'], 2)
         self.assertEqual(stats['pending_analyses'], 1)
     
+    @patch('src.services.analysis_service.os.path.exists')
+    @patch('src.services.analysis_service.os.path.getsize')
     @patch('src.services.analysis_service.Image.open')
-    def test_create_thumbnail_success(self, mock_image):
+    def test_create_thumbnail_success(self, mock_image, mock_getsize, mock_exists):
         """Test creating thumbnail successfully"""
+        # Mock file exists and has valid size
+        mock_exists.return_value = True
+        mock_getsize.return_value = 1000
+        
+        # Create a real test image file
+        test_image_path = os.path.join(self.temp_dir, 'test.jpg')
+        with open(test_image_path, 'wb') as f:
+            # Minimal valid JPEG
+            f.write(b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\t\x08\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.\' ",#\x1c\x1c(7),01444\x1f\'9=82<.342\xff\xc0\x00\x11\x08\x00\x01\x00\x01\x01\x01\x11\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\xff\xc4\x00\x14\x10\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x0c\x03\x01\x00\x02\x11\x03\x11\x00\x3f\x00\xaa\xff\xd9')
+        
+        # Mock PIL Image
         mock_img = MagicMock()
         mock_img.mode = 'RGB'
+        mock_img.verify.return_value = None
         mock_img.thumbnail.return_value = None
-        mock_img.save.return_value = None
-        mock_image.return_value.__enter__.return_value = mock_img
+        mock_img.convert.return_value = mock_img
         
-        result = self.service._create_thumbnail('test.jpg')
+        # Mock context manager
+        mock_image.return_value.__enter__ = MagicMock(return_value=mock_img)
+        mock_image.return_value.__exit__ = MagicMock(return_value=None)
+        
+        result = self.service._create_thumbnail(test_image_path)
         self.assertIsNotNone(result)
     
     @patch('src.services.analysis_service.Image.open')

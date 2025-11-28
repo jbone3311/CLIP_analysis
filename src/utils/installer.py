@@ -120,7 +120,8 @@ def create_sample_image():
         try:
             # Try to use a default font
             font = ImageFont.load_default()
-        except:
+        except (OSError, IOError, ImportError) as e:
+            logger.warning(f"Failed to load default font: {e}")
             font = None
         
         text = "Sample Image\nfor Testing"

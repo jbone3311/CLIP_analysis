@@ -197,10 +197,10 @@ def handle_process(args: argparse.Namespace) -> int:
     # Override with command line arguments
     config['IMAGE_DIRECTORY'] = args.input
     config['OUTPUT_DIRECTORY'] = args.output
-    config['API_BASE_URL'] = args.api_url
+    config['CLIP_API_URL'] = args.api_url  # Use consistent key name
     config['CLIP_MODEL_NAME'] = args.clip_model
     config['CLIP_MODES'] = args.clip_modes
-    config['PROMPT_CHOICES'] = args.prompt_choices
+    config['PROMPT_CHOICES'] = getattr(args, 'prompt_choices', ['P1', 'P2'])
     config['ENABLE_CLIP_ANALYSIS'] = args.enable_clip and not args.disable_clip
     config['ENABLE_LLM_ANALYSIS'] = args.enable_llm and not args.disable_llm
     config['ENABLE_METADATA_EXTRACTION'] = args.enable_metadata and not args.disable_metadata
@@ -230,7 +230,7 @@ def handle_process(args: argparse.Namespace) -> int:
     if args.verbose:
         print(f"[DIR] Input directory: {config['IMAGE_DIRECTORY']}")
         print(f"[DIR] Output directory: {config['OUTPUT_DIRECTORY']}")
-        print(f"[API] API URL: {config['API_BASE_URL']}")
+        print(f"[API] API URL: {config.get('CLIP_API_URL', config.get('API_BASE_URL', 'Not set'))}")
         print(f"[LLM] CLIP Model: {config['CLIP_MODEL_NAME']}")
         print(f"[TARGET] CLIP Modes: {config['CLIP_MODES']}")
         print(f"[PROMPT] Prompt Choices: {config['PROMPT_CHOICES']}")
@@ -583,7 +583,8 @@ def interactive_mode():
         elif choice == '2':
             print("\n🌐 Starting Web Interface...")
             try:
-                app.run(host='0.0.0.0', port=5050, debug=False)
+                web_interface = WebInterface()
+                web_interface.run(host='0.0.0.0', port=5050, debug=False)
             except KeyboardInterrupt:
                 print("\nWeb interface stopped")
             except Exception as e:

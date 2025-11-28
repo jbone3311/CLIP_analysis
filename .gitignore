@@ -51,6 +51,8 @@ Thumbs.db
 *.log
 logs/
 *.sqlite3
+*.db
+image_analysis.db
 
 # Project-specific
 config.ini
@@ -278,6 +280,15 @@ Output/
 !src/analyzers/LLM_Prompts.json
 !src/config/models.json
 .project-specific/
+
+# Database files
+*.db
+image_analysis.db
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
 
 # Logs
 *.log

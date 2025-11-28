@@ -40,10 +40,14 @@
                             </p>
                             
                             <div class="mb-2">
+                                {% if result.model %}
                                 <span class="badge bg-secondary">{{ result.model }}</span>
-                                {% for mode in result.modes %}
-                                <span class="badge bg-info">{{ mode }}</span>
-                                {% endfor %}
+                                {% endif %}
+                                {% if result.modes %}
+                                    {% for mode in result.modes %}
+                                    <span class="badge bg-info">{{ mode }}</span>
+                                    {% endfor %}
+                                {% endif %}
                             </div>
                             
                             <div class="mb-2">
@@ -108,7 +112,12 @@
 {% block scripts %}
 <script>
 function viewResult(resultId) {
-    const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+    const modalElement = document.getElementById('resultModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
     modal.show();
     
     // Load result data

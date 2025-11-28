@@ -19,8 +19,7 @@ if (this_directory / "requirements.txt").exists():
 setup(
     name="image-analysis-clip-llm",
     version="2.0.0",
-    author="Image Analysis Team",
-    author_email="team@example.com",
+    author="jbone3311",
     description="Advanced image analysis using CLIP and LLM technologies",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -73,7 +72,6 @@ setup(
     },
     keywords="image analysis, CLIP, LLM, AI, computer vision, machine learning",
     project_urls={
-        "Bug Reports": "https://github.com/jbone3311/CLIP_analysis/issues",
         "Source": "https://github.com/jbone3311/CLIP_analysis",
         "Documentation": "https://github.com/jbone3311/CLIP_analysis#readme",
     },

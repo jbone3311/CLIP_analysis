@@ -6,9 +6,12 @@ import os
 import json
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 import base64
+from src.utils.logger import get_global_logger
+
+logger = get_global_logger()
 
 
 class AnalysisService:
@@ -32,7 +35,15 @@ class AnalysisService:
                             # Try to find the original image and generate thumbnail
                             original_image = data.get('file_info', {}).get('filename', 'Unknown')
                             original_path = data.get('file_info', {}).get('directory', 'Images')
-                            full_image_path = os.path.join(original_path, original_image)
+                            
+                            # Build full path - handle both relative and absolute paths
+                            if os.path.isabs(original_path):
+                                full_image_path = os.path.join(original_path, original_image)
+                            else:
+                                # Try relative to upload folder first, then as absolute
+                                full_image_path = os.path.join(self.upload_folder, original_path, original_image)
+                                if not os.path.exists(full_image_path):
+                                    full_image_path = os.path.join(original_path, original_image)
                             
                             thumbnail_url = None
                             if os.path.exists(full_image_path):
@@ -50,8 +61,12 @@ class AnalysisService:
                                 'has_metadata': bool(data.get('analysis', {}).get('metadata')),
                                 'thumbnail': thumbnail_url
                             })
+                    except (OSError, IOError, FileNotFoundError) as e:
+                        logger.warning(f"Failed to load analysis file {file} (file error): {e}")
+                    except (json.JSONDecodeError, ValueError) as e:
+                        logger.warning(f"Failed to load analysis file {file} (JSON error): {e}")
                     except Exception as e:
-                        print(f"Error loading {file}: {e}")
+                        logger.warning(f"Failed to load analysis file {file} (unexpected error): {e}")
         return sorted(analysis_files, key=lambda x: x['date_processed'], reverse=True)
     
     def get_analysis_data(self, filename: str) -> Optional[Dict[str, Any]]:
@@ -63,8 +78,14 @@ class AnalysisService:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
+        except (OSError, IOError, FileNotFoundError) as e:
+            logger.warning(f"Failed to load analysis data for {filename} (file error): {e}")
+            return None
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"Failed to load analysis data for {filename} (JSON error): {e}")
+            return None
         except Exception as e:
-            print(f"Error loading analysis data for {filename}: {e}")
+            logger.warning(f"Failed to load analysis data for {filename} (unexpected error): {e}")
             return None
     
     def get_analysis_stats(self) -> Dict[str, int]:
@@ -81,7 +102,27 @@ class AnalysisService:
     
     def _create_thumbnail(self, image_path: str, size: tuple = (200, 200)) -> Optional[str]:
         """Create a thumbnail for an image"""
+        # Validate file exists and is not empty
+        if not os.path.exists(image_path):
+            logger.debug(f"Thumbnail skipped: file does not exist: {image_path}")
+            return None
+        
+        # Check file size (images should be at least 100 bytes)
         try:
+            file_size = os.path.getsize(image_path)
+            if file_size < 100:
+                logger.debug(f"Thumbnail skipped: file too small ({file_size} bytes): {image_path}")
+                return None
+        except OSError as e:
+            logger.debug(f"Thumbnail skipped: cannot access file: {image_path}: {e}")
+            return None
+        
+        try:
+            with Image.open(image_path) as img:
+                # Verify it's actually an image
+                img.verify()
+            
+            # Reopen for processing (verify() closes the image)
             with Image.open(image_path) as img:
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'LA', 'P'):
@@ -96,8 +137,17 @@ class AnalysisService:
                 buffer.seek(0)
                 
                 return base64.b64encode(buffer.getvalue()).decode('utf-8')
+        except (FileNotFoundError, OSError) as e:
+            logger.debug(f"Thumbnail skipped: file error for {image_path}: {e}")
+            return None
+        except UnidentifiedImageError as e:
+            logger.debug(f"Thumbnail skipped: not a valid image file {image_path}: {e}")
+            return None
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Thumbnail skipped: image processing error for {image_path}: {e}")
+            return None
         except Exception as e:
-            print(f"Error creating thumbnail for {image_path}: {e}")
+            logger.warning(f"Unexpected error creating thumbnail for {image_path}: {e}")
             return None
     
     def _get_thumbnail_data_url(self, image_path: str) -> Optional[str]:

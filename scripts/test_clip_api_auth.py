@@ -6,6 +6,7 @@ Tests connectivity and available options with password authentication.
 
 import requests
 import sys
+import os
 import json
 from typing import Dict, Any, Optional
 
@@ -90,9 +91,9 @@ def print_result(test_name: str, result: Dict[str, Any], show_data: bool = True)
 
 def main():
     """Main test function"""
-    # Get API URL and password from command line or use defaults
-    api_url = sys.argv[1] if len(sys.argv) > 1 else "https://briefly-charleston-verified-individuals.trycloudflare.com"
-    password = sys.argv[2] if len(sys.argv) > 2 else "jbone3311"
+    # Get API URL and password from command line, environment, or use defaults
+    api_url = sys.argv[1] if len(sys.argv) > 1 else os.getenv("CLIP_API_URL", "http://localhost:7860")
+    password = sys.argv[2] if len(sys.argv) > 2 else os.getenv("CLIP_API_PASSWORD", "")
     
     print("=" * 70)
     print("🧪 CLIP API Connection Test (with Authentication)")

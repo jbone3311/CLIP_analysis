@@ -245,7 +245,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Show image information
 function showImageInfo(filename, path, size, modified) {
-    const modal = new bootstrap.Modal(document.getElementById('imageInfoModal'));
+    const modalElement = document.getElementById('imageInfoModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    
     const content = document.getElementById('imageInfoContent');
     
     const sizeMB = (size / 1024 / 1024).toFixed(2);
@@ -288,7 +294,12 @@ function deleteImage(filename, path) {
     imageToDelete = { filename, path };
     document.getElementById('deleteImageName').textContent = filename;
     
-    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const modalElement = document.getElementById('deleteModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
     modal.show();
 }
 

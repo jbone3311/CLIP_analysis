@@ -83,7 +83,10 @@ class WebInterface:
         app = Flask(__name__, 
                     template_folder='templates',
                     static_folder='static')
-        app.secret_key = 'your-secret-key-here'  # Change this in production
+        
+        # Load secret key from environment or use default (for development only)
+        from src.config.config_manager import get_config_value
+        app.secret_key = get_config_value('FLASK_SECRET_KEY') or get_config_value('SECRET_KEY') or 'your-secret-key-here-change-this-in-production'
         
         # Configure app
         app.config['UPLOAD_FOLDER'] = os.path.join(self.project_root, 'Images')
@@ -184,12 +187,16 @@ class WebInterface:
                 flash('Processing already in progress', 'warning')
                 return redirect(url_for('process'))
             
+            # Get force reprocess option from form
+            force_reprocess = request.form.get('force_reprocess', 'false').lower() == 'true'
+            
             # Start processing in background
             self.processing_status['status'] = 'processing'
             self.processing_status['message'] = 'Starting image processing...'
             self.processing_status['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
+            self.processing_status['force_reprocess'] = force_reprocess
             
-            thread = threading.Thread(target=self._process_images_async)
+            thread = threading.Thread(target=self._process_images_async, args=(force_reprocess,))
             thread.daemon = True
             thread.start()
             self.processing_threads['main'] = thread
@@ -202,10 +209,13 @@ class WebInterface:
             """Get processing status"""
             return jsonify(self.processing_status)
     
-    def _process_images_async(self):
+    def _process_images_async(self, force_reprocess: bool = False):
         """Process images in background thread"""
         try:
             config = self.config_service.get_processing_config()
+            # Override force reprocess if specified
+            if force_reprocess:
+                config['FORCE_REPROCESS'] = True
             processor = DirectoryProcessor(config)
             processor.process_directory()
             self.processing_status['status'] = 'completed'

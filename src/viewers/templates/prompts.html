@@ -504,7 +504,12 @@ function editPrompt(promptId) {
     updateCounts();
     updatePreview();
     
-    new bootstrap.Modal(document.getElementById('promptModal')).show();
+    const modalElement = document.getElementById('promptModal');
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
 }
 
 function addNewPrompt() {
@@ -584,7 +589,12 @@ function previewPrompt(promptId) {
     const content = `Title: ${prompt.TITLE}\nCategory: ${prompt.CATEGORY}\nTemperature: ${prompt.TEMPERATURE}\nMax Tokens: ${prompt.MAX_TOKENS}\n\n${prompt.PROMPT_TEXT}`;
     document.getElementById('previewContent').textContent = content;
     
-    new bootstrap.Modal(document.getElementById('previewModal')).show();
+    const modalElement = document.getElementById('previewModal');
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
 }
 
 function testPrompt(promptId) {
@@ -598,7 +608,12 @@ function testPrompt(promptId) {
         <strong>Max Tokens:</strong> ${prompt.MAX_TOKENS}
     `;
     
-    new bootstrap.Modal(document.getElementById('testModal')).show();
+    const modalElement = document.getElementById('testModal');
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    modal.show();
 }
 
 function runTest() {

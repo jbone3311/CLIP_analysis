@@ -104,32 +104,22 @@ CLIP_Analysis/
 
 ## ⚙️ Configuration
 
-The system uses environment variables for configuration. Copy `secure_env_example.txt` to `.env` and customize:
+The system uses environment variables for configuration. See **[CONFIG.md](CONFIG.md)** for complete configuration details.
 
+**Quick Setup:**
+1. Copy `secure_env_example.txt` to `.env`
+2. Add your API keys and configuration
+3. See `CONFIG.md` for all available options
+
+**Key Configuration Files:**
+- `CONFIG.md` - Complete configuration guide
+- `CLIP_API.md` - CLIP API setup and usage
+- `secure_env_example.txt` - Environment variable template
+
+**Minimum Required:**
 ```bash
-# CLIP API Configuration
-CLIP_API_URL=http://localhost:7860                # Change to your CLIP API endpoint
-CLIP_API_PASSWORD=                                 # Optional: Add if your API requires authentication
-CLIP_MODEL_NAME=ViT-L-14/openai                   # CLIP model to use
-CLIP_MODES=best,fast,classic,negative,caption      # Analysis modes
-CLIP_API_TIMEOUT=300                               # Request timeout (seconds)
-
-# Analysis Settings
-ENABLE_CLIP_ANALYSIS=True
-ENABLE_LLM_ANALYSIS=True
-ENABLE_METADATA_EXTRACTION=True
-ENABLE_PARALLEL_PROCESSING=False
-
-# Directories
-IMAGE_DIRECTORY=Images
-OUTPUT_DIRECTORY=Output
-
-# LLM Configuration
-OPENAI_API_KEY=your_openai_key_here
-ANTHROPIC_API_KEY=your_anthropic_key_here
-
-# Web Interface
-WEB_PORT=5050
+CLIP_API_URL=http://localhost:7860
+CLIP_API_PASSWORD=                    # Only if your API requires authentication
 ```
 
 ## 🧪 Testing
@@ -188,13 +178,7 @@ processor = DirectoryProcessor(config, mock_db, mock_llm)
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/jbone3311/CLIP_analysis.git
-   cd CLIP_analysis
-   ```
-
-2. **Create virtual environment:**
+1. **Create virtual environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -334,15 +318,14 @@ def api_call():
 - **Error Handling**: No sensitive data in error messages
 - **File Security**: Safe file operations with validation
 
-## 🤝 Contributing
+## 🔧 Development Notes
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Run tests: `python tests/run_tests.py`
-5. Commit your changes: `git commit -m "Add feature"`
-6. Push to the branch: `git push origin feature-name`
-7. Submit a pull request
+This is a personal project. For development:
+
+1. Make your changes
+2. Run tests: `python tests/run_tests.py`
+3. Commit your changes: `git commit -m "Description of changes"`
+4. See `DEVELOPMENT_NOTES.md` for personal development guidelines
 
 ## 📝 License
 
@@ -355,11 +338,12 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Flask web framework
 - Python community
 
-## 📞 Support
+## 📚 Documentation
 
-For issues and questions:
-- Create an issue on GitHub
-- Check the documentation in `.project-specific/`
+Complete documentation is available:
+- `CONFIG.md` - Configuration guide
+- `CLIP_API.md` - CLIP API setup
+- `DEVELOPMENT_NOTES.md` - Personal development notes
 - Review the test suite for usage examples
 
 ---

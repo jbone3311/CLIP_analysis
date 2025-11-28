@@ -212,7 +212,8 @@ class TestDirectoryProcessor(unittest.TestCase):
                 f.write(f"test content for {img}")
         
         self.config = {
-            'API_BASE_URL': 'http://localhost:7860',
+            'CLIP_API_URL': 'http://localhost:7860',
+            'API_BASE_URL': 'http://localhost:7860',  # Legacy support
             'CLIP_MODEL_NAME': 'ViT-L-14/openai',
             'ENABLE_CLIP_ANALYSIS': True,
             'ENABLE_LLM_ANALYSIS': True,
@@ -224,15 +225,18 @@ class TestDirectoryProcessor(unittest.TestCase):
             'PROMPT_CHOICES': ['P1', 'P2'],
             'DEBUG': False,
             'FORCE_REPROCESS': False,
-            'GENERATE_SUMMARIES': True
+            'GENERATE_SUMMARIES': True,
+            'llm_models': [{'number': 1, 'title': 'Test Model', 'api_url': 'https://api.test.com', 'api_key': 'test_key', 'model_name': 'test-model'}]
         }
     
     def tearDown(self):
         """Clean up test fixtures"""
         shutil.rmtree(self.temp_dir)
     
-    @patch('directory_processor.MODELS', [])
-    def test_initialization(self):
+    @patch('src.processors.directory_processor.analyze_image_with_clip')
+    @patch('src.processors.directory_processor.LLMManager')
+    @patch('src.processors.directory_processor.extract_metadata')
+    def test_initialization(self, mock_metadata, mock_llm, mock_clip):
         """Test DirectoryProcessor initialization"""
         processor = DirectoryProcessor(self.config)
         
@@ -241,8 +245,10 @@ class TestDirectoryProcessor(unittest.TestCase):
         self.assertTrue(processor.config['ENABLE_CLIP_ANALYSIS'])
         self.assertTrue(processor.config['ENABLE_LLM_ANALYSIS'])
     
-    @patch('directory_processor.MODELS', [])
-    def test_find_image_files(self):
+    @patch('src.processors.directory_processor.analyze_image_with_clip')
+    @patch('src.processors.directory_processor.LLMManager')
+    @patch('src.processors.directory_processor.extract_metadata')
+    def test_find_image_files(self, mock_metadata, mock_llm, mock_clip):
         """Test finding image files"""
         processor = DirectoryProcessor(self.config)
         image_files = processor.find_image_files(self.image_dir)
@@ -252,8 +258,10 @@ class TestDirectoryProcessor(unittest.TestCase):
         self.assertTrue(any("image2.png" in f for f in image_files))
         self.assertTrue(any("image3.gif" in f for f in image_files))
     
-    @patch('directory_processor.MODELS', [])
-    def test_find_image_files_empty_directory(self):
+    @patch('src.processors.directory_processor.analyze_image_with_clip')
+    @patch('src.processors.directory_processor.LLMManager')
+    @patch('src.processors.directory_processor.extract_metadata')
+    def test_find_image_files_empty_directory(self, mock_metadata, mock_llm, mock_clip):
         """Test finding image files in empty directory"""
         empty_dir = os.path.join(self.temp_dir, "empty")
         os.makedirs(empty_dir)
@@ -263,8 +271,11 @@ class TestDirectoryProcessor(unittest.TestCase):
         
         self.assertEqual(len(image_files), 0)
     
-    @patch('directory_processor.MODELS', [])
-    def test_load_existing_analysis(self):
+    @patch('src.processors.directory_processor.analyze_image_with_clip')
+    @patch('src.processors.directory_processor.LLMManager')
+    @patch('src.processors.directory_processor.extract_metadata')
+    @patch('src.processors.directory_processor.compute_file_hash')
+    def test_load_existing_analysis(self, mock_hash, mock_metadata, mock_llm, mock_clip):
         """Test loading existing analysis"""
         processor = DirectoryProcessor(self.config)
         
@@ -280,8 +291,9 @@ class TestDirectoryProcessor(unittest.TestCase):
             json.dump(existing_data, f)
         
         # Mock MD5 computation
-        with patch.object(UnifiedAnalysisResult, '_compute_md5', return_value="test_md5"):
-            result = processor._load_existing_analysis(os.path.join(self.image_dir, "image1.jpg"))
+        mock_hash.return_value = "test_md5"
+        
+        result = processor._load_existing_analysis(os.path.join(self.image_dir, "image1.jpg"))
         
         self.assertIsNotNone(result)
         self.assertEqual(result["file_info"]["filename"], "image1.jpg")

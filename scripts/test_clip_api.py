@@ -6,6 +6,7 @@ Tests connectivity and available options at your CLIP API endpoint.
 
 import requests
 import sys
+import os
 import json
 from typing import Dict, Any
 
@@ -58,8 +59,8 @@ def print_result(test_name: str, result: Dict[str, Any]):
 
 def main():
     """Main test function"""
-    # Default API URL (can be overridden)
-    api_url = sys.argv[1] if len(sys.argv) > 1 else "https://briefly-charleston-verified-individuals.trycloudflare.com"
+    # Default API URL (can be overridden via command line or environment)
+    api_url = sys.argv[1] if len(sys.argv) > 1 else os.getenv("CLIP_API_URL", "http://localhost:7860")
     
     print("=" * 70)
     print("🧪 CLIP API Connection Test")
@@ -95,7 +96,7 @@ def main():
     print()
     print("=" * 70)
     print()
-    print("📚 For detailed configuration options, see: CLIP_API_GUIDE.md")
+    print("📚 For detailed configuration options, see: CLIP_API.md")
     print()
 
 if __name__ == "__main__":

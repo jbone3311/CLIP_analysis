@@ -410,8 +410,8 @@ def test_prompt(prompt_id: str):
             # Clean up temporary file
             try:
                 os.remove(temp_path)
-            except:
-                pass
+            except (OSError, FileNotFoundError, PermissionError) as e:
+                logger.warning(f"Failed to remove temporary file {temp_path}: {e}")
                 
     except Exception as e:
         logger.error(f"Error testing prompt {prompt_id}: {e}")

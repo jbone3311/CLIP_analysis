@@ -110,6 +110,10 @@ class DatabaseManager:
 
     def _row_to_dict(self, cur, row) -> Dict[str, Any]:
         """Convert database row to dictionary"""
+        if not cur.description:
+            logger.warning("Cursor has no description, cannot convert row to dict")
+            return {}
+        
         columns = [desc[0] for desc in cur.description]
         data = dict(zip(columns, row))
         
@@ -118,8 +122,9 @@ class DatabaseManager:
             if data.get(key):
                 try:
                     data[key] = json.loads(data[key])
-                except Exception:
-                    pass
+                except (json.JSONDecodeError, TypeError, ValueError) as e:
+                    logger.debug(f"Failed to parse JSON field '{key}': {e}")
+                    # Keep original value if JSON parsing fails
         return data
 
     def delete_result(self, result_id: int) -> bool:
@@ -129,7 +134,8 @@ class DatabaseManager:
                 conn.execute('DELETE FROM analysis_results WHERE id = ?', (result_id,))
                 conn.commit()
             return True
-        except Exception:
+        except (sqlite3.Error, sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Failed to delete result {result_id}: {e}")
             return False
 
     def clear_database(self) -> bool:
@@ -139,7 +145,8 @@ class DatabaseManager:
                 conn.execute('DELETE FROM analysis_results')
                 conn.commit()
             return True
-        except Exception:
+        except (sqlite3.Error, sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Failed to clear database: {e}")
             return False
 
     def insert_llm_model(self, name: str, type: str, url: str = None, api_key: str = None, model_name: str = None, prompts: str = None):
@@ -167,7 +174,8 @@ class DatabaseManager:
                 conn.execute('UPDATE llm_models SET is_active = 0 WHERE id = ?', (model_id,))
                 conn.commit()
             return True
-        except Exception:
+        except (sqlite3.Error, sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Failed to delete LLM model {model_id}: {e}")
             return False
 
     def update_llm_model_prompts(self, model_id: int, prompts: str) -> bool:
@@ -177,7 +185,8 @@ class DatabaseManager:
                 conn.execute('UPDATE llm_models SET prompts = ? WHERE id = ?', (prompts, model_id))
                 conn.commit()
             return True
-        except Exception:
+        except (sqlite3.Error, sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+            logger.error(f"Failed to update LLM model prompts for {model_id}: {e}")
             return False
 
     def get_stats(self) -> Dict[str, Any]:

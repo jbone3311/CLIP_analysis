@@ -6,9 +6,12 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from werkzeug.utils import secure_filename
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 import base64
+from src.utils.logger import get_global_logger
+
+logger = get_global_logger()
 
 
 class ImageService:
@@ -70,7 +73,27 @@ class ImageService:
     
     def _create_thumbnail(self, image_path: str, size: tuple = (200, 200)) -> Optional[str]:
         """Create a thumbnail for an image"""
+        # Validate file exists and is not empty
+        if not os.path.exists(image_path):
+            logger.debug(f"Thumbnail skipped: file does not exist: {image_path}")
+            return None
+        
+        # Check file size (images should be at least 100 bytes)
         try:
+            file_size = os.path.getsize(image_path)
+            if file_size < 100:
+                logger.debug(f"Thumbnail skipped: file too small ({file_size} bytes): {image_path}")
+                return None
+        except OSError as e:
+            logger.debug(f"Thumbnail skipped: cannot access file: {image_path}: {e}")
+            return None
+        
+        try:
+            with Image.open(image_path) as img:
+                # Verify it's actually an image
+                img.verify()
+            
+            # Reopen for processing (verify() closes the image)
             with Image.open(image_path) as img:
                 # Convert to RGB if necessary
                 if img.mode in ('RGBA', 'LA', 'P'):
@@ -85,8 +108,17 @@ class ImageService:
                 buffer.seek(0)
                 
                 return base64.b64encode(buffer.getvalue()).decode('utf-8')
+        except (FileNotFoundError, OSError) as e:
+            logger.debug(f"Thumbnail skipped: file error for {image_path}: {e}")
+            return None
+        except UnidentifiedImageError as e:
+            logger.debug(f"Thumbnail skipped: not a valid image file {image_path}: {e}")
+            return None
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Thumbnail skipped: image processing error for {image_path}: {e}")
+            return None
         except Exception as e:
-            print(f"Error creating thumbnail for {image_path}: {e}")
+            logger.warning(f"Unexpected error creating thumbnail for {image_path}: {e}")
             return None
     
     def _get_thumbnail_data_url(self, image_path: str) -> Optional[str]:

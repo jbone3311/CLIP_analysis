@@ -25,6 +25,8 @@ from datetime import datetime
 
 from .logger import get_logger, AppLogger
 
+logger = get_logger(__name__)
+
 
 class DebugInspector:
     """Inspects and displays debug information"""
@@ -51,7 +53,8 @@ class DebugInspector:
         """Get approximate size of an object"""
         try:
             return sys.getsizeof(obj)
-        except:
+        except (TypeError, AttributeError) as e:
+            logger.debug(f"Could not get size of object: {e}")
             return 0
     
     def _get_attributes(self, obj: Any, max_depth: int) -> Dict[str, Any]:

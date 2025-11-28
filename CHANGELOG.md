@@ -14,10 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session Management**: Smart session caching and re-authentication
 - **Environment Configuration**: `CLIP_API_PASSWORD` environment variable support
 - **Documentation**: Comprehensive guides for authenticated CLIP usage
-  - `AUTHENTICATED_CLIP_USAGE.md` - Complete usage guide
-  - `CLIP_API_GUIDE.md` - API reference documentation
-  - `PINOKIO_API_SETUP.md` - Pinokio-specific setup guide
-  - `CLIP_API_TEST_RESULTS.md` - Test findings and troubleshooting
+  - `CLIP_API.md` - Complete CLIP API guide (includes authentication)
+  - `CONFIG.md` - Configuration guide
 
 #### 🧪 Testing Tools
 - **CLIP API Test Scripts**: `scripts/test_clip_api.py` and `scripts/test_clip_api_auth.py`
@@ -259,8 +257,9 @@ md5_hash = compute_file_hash(file_path, algorithm='md5')
 
 ---
 
-## Contributors
+## Development Notes
 
+This project uses modern software engineering practices:
 - **Architecture Refactoring**: Complete codebase reorganization
 - **Dependency Injection**: Modern DI pattern implementation  
 - **Utility Extraction**: Centralized common operations

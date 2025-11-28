@@ -531,7 +531,12 @@ function addModel(name, type, url, modelName) {
         apiKeyGroup.style.display = 'none';
     }
     
-    const modal = new bootstrap.Modal(document.getElementById('addModelModal'));
+    const modalElement = document.getElementById('addModelModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
     modal.show();
 }
 
@@ -573,7 +578,12 @@ function editPrompts(modelId, modelName, currentPrompts) {
     document.getElementById('editModelName').textContent = modelName;
     document.getElementById('editPrompts').value = currentPrompts;
     
-    const modal = new bootstrap.Modal(document.getElementById('editPromptsModal'));
+    const modalElement = document.getElementById('editPromptsModal');
+    // Get existing instance or create new one
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
     modal.show();
 }
 

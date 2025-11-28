@@ -86,6 +86,13 @@
                         </p>
                         
                         <form method="POST" class="d-inline">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="forceReprocess" name="force_reprocess" value="true">
+                                <label class="form-check-label" for="forceReprocess">
+                                    <strong>Force Reprocess All Images</strong>
+                                    <div class="form-text">Reprocess images even if they have already been analyzed</div>
+                                </label>
+                            </div>
                             <button type="submit" class="btn btn-success btn-lg">
                                 <i class="fas fa-play me-2"></i>
                                 Start Processing

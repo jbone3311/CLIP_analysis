@@ -56,7 +56,9 @@ class UnifiedAnalysisResult:
         self.image_path = image_path
         self.config = config
         self.filename = os.path.basename(image_path)
-        self.directory = os.path.dirname(image_path).replace("\\", "/")
+        # Normalize path separators using pathlib for cross-platform compatibility
+        from pathlib import Path
+        self.directory = str(Path(os.path.dirname(image_path)).as_posix())
         self.md5 = compute_file_hash(image_path, algorithm='md5')
         self.date_added = datetime.now().isoformat()
         
@@ -131,8 +133,14 @@ class UnifiedAnalysisResult:
                 json.dump(self.result, f, indent=2, ensure_ascii=False)
             logger.info(f"Saved unified analysis result to {output_path}")
             return output_path
+        except (OSError, IOError, PermissionError) as e:
+            logger.error(f"Failed to save analysis result (file error): {e}")
+            return ""
+        except (TypeError, ValueError, json.JSONEncodeError) as e:
+            logger.error(f"Failed to save analysis result (serialization error): {e}")
+            return ""
         except Exception as e:
-            logger.error(f"Failed to save analysis result: {e}")
+            logger.error(f"Failed to save analysis result (unexpected error): {e}")
             return ""
 
 
@@ -192,8 +200,9 @@ class DirectoryProcessor:
                 errors.append(f"Cannot create output directory '{self.config['OUTPUT_DIRECTORY']}': {e}")
         
         if self.config['ENABLE_CLIP_ANALYSIS']:
-            if not self.config.get('API_BASE_URL'):
-                errors.append("CLIP analysis enabled but API_BASE_URL not configured")
+            # Check both CLIP_API_URL (preferred) and API_BASE_URL (legacy)
+            if not self.config.get('CLIP_API_URL') and not self.config.get('API_BASE_URL'):
+                errors.append("CLIP analysis enabled but CLIP_API_URL not configured")
             if not self.config.get('CLIP_MODEL_NAME'):
                 errors.append("CLIP analysis enabled but CLIP_MODEL_NAME not configured")
         
@@ -332,9 +341,14 @@ class DirectoryProcessor:
                         if progress_tracker:
                             progress_tracker.update_status(item_name=image_file, step=step, mode=mode)
                     
+                    # Get API URL with fallback for backward compatibility
+                    api_url = self.config.get('CLIP_API_URL') or self.config.get('API_BASE_URL')
+                    if not api_url:
+                        raise ValueError("CLIP_API_URL or API_BASE_URL must be configured")
+                    
                     clip_result = analyze_image_with_clip(
                         image_path=image_file,
-                        api_base_url=self.config['API_BASE_URL'],
+                        api_base_url=api_url,
                         model=self.config['CLIP_MODEL_NAME'],
                         modes=self.config['CLIP_MODES'],
                         force_reprocess=self.config.get('FORCE_REPROCESS', False),
@@ -402,6 +416,8 @@ class DirectoryProcessor:
                     llm_results=json.dumps(analysis_result.result.get("analysis", {}).get("llm", {}))
                 )
                 logger.info(f"Saved analysis to database for {image_file}")
+            except (ValueError, TypeError, json.JSONEncodeError) as db_error:
+                logger.warning(f"Failed to serialize data for database: {db_error}")
             except Exception as db_error:
                 logger.warning(f"Failed to save to database: {db_error}")
             
@@ -439,8 +455,11 @@ class DirectoryProcessor:
                 else:
                     logger.info(f"Image {image_file} has changed, will reprocess")
                     return None
-            except Exception as e:
+            except (OSError, IOError, FileNotFoundError, json.JSONDecodeError) as e:
                 logger.warning(f"Failed to load existing analysis for {image_file}: {e}")
+                return None
+            except Exception as e:
+                logger.warning(f"Failed to load existing analysis for {image_file} (unexpected error): {e}")
                 return None
         return None
 
@@ -465,8 +484,12 @@ class DirectoryProcessor:
                 with open(os.path.join(summary_dir, analysis_file), 'r', encoding='utf-8') as f:
                     result = json.load(f)
                     all_results.append(result)
+            except (OSError, IOError, FileNotFoundError) as e:
+                logger.warning(f"Failed to load {analysis_file} (file error): {e}")
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"Failed to load {analysis_file} (JSON error): {e}")
             except Exception as e:
-                logger.warning(f"Failed to load {analysis_file}: {e}")
+                logger.warning(f"Failed to load {analysis_file} (unexpected error): {e}")
         
         # Generate different types of summaries
         self._generate_clip_summary(all_results, summary_dir)
@@ -479,49 +502,70 @@ class DirectoryProcessor:
         """Generate CLIP analysis summary"""
         clip_results = []
         for result in results:
-            if result.get('analysis', {}).get('clip'):
+            file_info = result.get('file_info', {})
+            analysis = result.get('analysis', {})
+            if analysis.get('clip'):
                 clip_results.append({
-                    'filename': result['file_info']['filename'],
-                    'directory': result['file_info']['directory'],
-                    'clip_analysis': result['analysis']['clip']
+                    'filename': file_info.get('filename', 'unknown'),
+                    'directory': file_info.get('directory', 'unknown'),
+                    'clip_analysis': analysis.get('clip')
                 })
         
         if clip_results:
             summary_path = os.path.join(summary_dir, 'clip_analysis_summary.json')
-            with open(summary_path, 'w', encoding='utf-8') as f:
-                json.dump(clip_results, f, indent=2, ensure_ascii=False)
+            try:
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    json.dump(clip_results, f, indent=2, ensure_ascii=False)
+            except (OSError, IOError, PermissionError) as e:
+                logger.error(f"Failed to save CLIP summary: {e}")
+            except (TypeError, ValueError, json.JSONEncodeError) as e:
+                logger.error(f"Failed to serialize CLIP summary: {e}")
 
     def _generate_llm_summary(self, results: List[Dict], summary_dir: str) -> None:
         """Generate LLM analysis summary"""
         llm_results = []
         for result in results:
-            if result.get('analysis', {}).get('llm'):
+            file_info = result.get('file_info', {})
+            analysis = result.get('analysis', {})
+            if analysis.get('llm'):
                 llm_results.append({
-                    'filename': result['file_info']['filename'],
-                    'directory': result['file_info']['directory'],
-                    'llm_analysis': result['analysis']['llm']
+                    'filename': file_info.get('filename', 'unknown'),
+                    'directory': file_info.get('directory', 'unknown'),
+                    'llm_analysis': analysis.get('llm')
                 })
         
         if llm_results:
             summary_path = os.path.join(summary_dir, 'llm_analysis_summary.json')
-            with open(summary_path, 'w', encoding='utf-8') as f:
-                json.dump(llm_results, f, indent=2, ensure_ascii=False)
+            try:
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    json.dump(llm_results, f, indent=2, ensure_ascii=False)
+            except (OSError, IOError, PermissionError) as e:
+                logger.error(f"Failed to save LLM summary: {e}")
+            except (TypeError, ValueError, json.JSONEncodeError) as e:
+                logger.error(f"Failed to serialize LLM summary: {e}")
 
     def _generate_metadata_summary(self, results: List[Dict], summary_dir: str) -> None:
         """Generate metadata summary"""
         metadata_results = []
         for result in results:
-            if result.get('analysis', {}).get('metadata'):
+            file_info = result.get('file_info', {})
+            analysis = result.get('analysis', {})
+            if analysis.get('metadata'):
                 metadata_results.append({
-                    'filename': result['file_info']['filename'],
-                    'directory': result['file_info']['directory'],
-                    'metadata': result['analysis']['metadata']
+                    'filename': file_info.get('filename', 'unknown'),
+                    'directory': file_info.get('directory', 'unknown'),
+                    'metadata': analysis.get('metadata')
                 })
         
         if metadata_results:
             summary_path = os.path.join(summary_dir, 'metadata_summary.json')
-            with open(summary_path, 'w', encoding='utf-8') as f:
-                json.dump(metadata_results, f, indent=2, ensure_ascii=False)
+            try:
+                with open(summary_path, 'w', encoding='utf-8') as f:
+                    json.dump(metadata_results, f, indent=2, ensure_ascii=False)
+            except (OSError, IOError, PermissionError) as e:
+                logger.error(f"Failed to save metadata summary: {e}")
+            except (TypeError, ValueError, json.JSONEncodeError) as e:
+                logger.error(f"Failed to serialize metadata summary: {e}")
 
 
 def main() -> None:

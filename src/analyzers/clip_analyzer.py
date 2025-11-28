@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import datetime
 import hashlib
 import sys
+import threading
 
 # Import database
 from src.database.db_manager import DatabaseManager
@@ -34,9 +35,10 @@ EMOJI_PROCESSING = get_config_value("EMOJI_PROCESSING", "PROCESSING")
 # Initialize database manager
 db_manager = DatabaseManager()
 
-# Global session cache for authenticated requests
+# Global session cache for authenticated requests (thread-safe)
 _session_cache: Optional[requests.Session] = None
 _session_url: Optional[str] = None
+_session_lock = threading.Lock()  # Lock for thread-safe access to session cache
 
 
 def get_authenticated_session(api_base_url: str, password: Optional[str] = None) -> requests.Session:
@@ -56,53 +58,55 @@ def get_authenticated_session(api_base_url: str, password: Optional[str] = None)
     """
     global _session_cache, _session_url
     
-    # Return cached session if we have one for this URL
-    if _session_cache and _session_url == api_base_url:
-        # Test if session is still valid
-        try:
-            test_response = _session_cache.get(f"{api_base_url}/info", timeout=5)
-            if test_response.status_code == 200:
-                logger.debug("Using cached authenticated session")
-                return _session_cache
-            else:
-                logger.debug("Cached session expired, re-authenticating")
-        except:
-            logger.debug("Cached session failed, re-authenticating")
-    
-    # Create new session
-    session = requests.Session()
-    
-    # Get password from config if not provided
-    if password is None:
-        password = get_config_value("CLIP_API_PASSWORD")
-    
-    # If password provided, attempt authentication
-    if password:
-        try:
-            logger.info("Authenticating with CLIP API...")
-            login_url = f"{api_base_url}/pinokio/login"
-            response = session.post(
-                login_url,
-                data={"password": password},
-                allow_redirects=True,
-                timeout=10
-            )
-            
-            # Check if we got a session cookie
-            if 'connect.sid' in session.cookies:
-                logger.info("✅ Successfully authenticated with CLIP API")
-                _session_cache = session
-                _session_url = api_base_url
-                return session
-            else:
-                logger.warning("No session cookie received, continuing without authentication")
-        except Exception as e:
-            logger.warning(f"Authentication failed: {e}. Continuing without authentication.")
-    else:
-        logger.debug("No password provided, using unauthenticated session")
-    
-    # Return regular session (no auth)
-    return session
+    # Thread-safe access to session cache
+    with _session_lock:
+        # Return cached session if we have one for this URL
+        if _session_cache and _session_url == api_base_url:
+            # Test if session is still valid
+            try:
+                test_response = _session_cache.get(f"{api_base_url}/info", timeout=5)
+                if test_response.status_code == 200:
+                    logger.debug("Using cached authenticated session")
+                    return _session_cache
+                else:
+                    logger.debug("Cached session expired, re-authenticating")
+            except (requests.RequestException, requests.Timeout, requests.ConnectionError) as e:
+                logger.debug(f"Cached session failed, re-authenticating: {e}")
+        
+        # Create new session
+        session = requests.Session()
+        
+        # Get password from config if not provided
+        if password is None:
+            password = get_config_value("CLIP_API_PASSWORD")
+        
+        # If password provided, attempt authentication
+        if password:
+            try:
+                logger.info("Authenticating with CLIP API...")
+                login_url = f"{api_base_url}/pinokio/login"
+                response = session.post(
+                    login_url,
+                    data={"password": password},
+                    allow_redirects=True,
+                    timeout=10
+                )
+                
+                # Check if we got a session cookie
+                if 'connect.sid' in session.cookies:
+                    logger.info("✅ Successfully authenticated with CLIP API")
+                    _session_cache = session
+                    _session_url = api_base_url
+                    return session
+                else:
+                    logger.warning("No session cookie received, continuing without authentication")
+            except (requests.RequestException, requests.Timeout, requests.ConnectionError, ValueError) as e:
+                logger.warning(f"Authentication failed: {e}. Continuing without authentication.")
+        else:
+            logger.debug("No password provided, using unauthenticated session")
+        
+        # Return regular session (no auth)
+        return session
 
 
 def encode_image_to_base64(image_path: str) -> str:

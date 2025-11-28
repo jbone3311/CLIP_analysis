@@ -76,7 +76,8 @@ class WildcardGenerator:
                     if isinstance(analysis_data, str):
                         try:
                             analysis_data = json.loads(analysis_data)
-                        except:
+                        except (json.JSONDecodeError, TypeError, ValueError) as e:
+                            logger.warning(f"Failed to parse analysis_data JSON: {e}")
                             analysis_data = {}
                     
                     # Extract prompts from different modes
@@ -102,7 +103,8 @@ class WildcardGenerator:
                     if isinstance(llm_data, str):
                         try:
                             llm_data = json.loads(llm_data)
-                        except:
+                        except (json.JSONDecodeError, TypeError, ValueError) as e:
+                            logger.warning(f"Failed to parse llm_data JSON: {e}")
                             llm_data = {}
                     
                     if isinstance(llm_data, dict):

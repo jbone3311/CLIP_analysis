@@ -61,8 +61,77 @@ def init_main_routes(app, analysis_service: AnalysisService, image_service: Imag
     def database():
         """Database browser page"""
         # Get all results from database
-        results = db_manager.get_all_results() if db_manager else []
-        return render_template('database.html', results=results)
+        if not db_manager:
+            return render_template('database.html', results=[])
+        
+        results = db_manager.get_all_results()
+        
+        # Enhance results with computed fields for template
+        enhanced_results = []
+        for result in results:
+            # Ensure modes is a list
+            if result.get('modes') is None:
+                result['modes'] = []
+            elif isinstance(result.get('modes'), str):
+                try:
+                    import json
+                    result['modes'] = json.loads(result['modes'])
+                except:
+                    result['modes'] = []
+            
+            # Compute has_prompts - check if prompts exist and have content
+            prompts = result.get('prompts') or {}
+            if isinstance(prompts, str):
+                try:
+                    import json
+                    prompts = json.loads(prompts)
+                except:
+                    prompts = {}
+            result['has_prompts'] = bool(prompts and isinstance(prompts, dict) and len(prompts) > 0)
+            
+            # Compute has_analysis - check if analysis_results exist and have content
+            analysis_results = result.get('analysis_results') or {}
+            if isinstance(analysis_results, str):
+                try:
+                    import json
+                    analysis_results = json.loads(analysis_results)
+                except:
+                    analysis_results = {}
+            result['has_analysis'] = bool(analysis_results and isinstance(analysis_results, dict) and len(analysis_results) > 0)
+            
+            # Try to generate thumbnail path (if image exists)
+            result['thumbnail'] = None
+            if result.get('filename') and result.get('directory'):
+                import os
+                # Try multiple path combinations
+                possible_paths = [
+                    os.path.join(result['directory'], result['filename']),
+                    os.path.join('Images', result['directory'], result['filename']),
+                    os.path.join('Images', result['filename']),
+                    result['filename']
+                ]
+                
+                for image_path in possible_paths:
+                    if os.path.exists(image_path):
+                        # Use the image service to generate thumbnail if available
+                        try:
+                            from src.services.image_service import ImageService
+                            import os
+                            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                            upload_folder = os.path.join(project_root, 'Images')
+                            img_service = ImageService(
+                                upload_folder=upload_folder,
+                                allowed_extensions={'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'webp'}
+                            )
+                            result['thumbnail'] = img_service._get_thumbnail_data_url(image_path)
+                            break
+                        except Exception as e:
+                            # Silently fail - thumbnail is optional
+                            pass
+            
+            enhanced_results.append(result)
+        
+        return render_template('database.html', results=enhanced_results)
     
     @app.route('/llm-config')
     def llm_config():
