@@ -58,6 +58,7 @@ image_analysis.db
 config.ini
 secrets.json
 *.env
+!.env.example
 
 # Jupyter Notebook
 .ipynb_checkpoints
