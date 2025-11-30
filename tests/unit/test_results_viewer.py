@@ -185,16 +185,21 @@ class TestResultsViewer(unittest.TestCase):
         with patch('src.viewers.results_viewer.find_analysis_files') as mock_find:
             mock_find.return_value = [self.test_file_path]
             
-            result = export_results(self.test_output_dir, output_file, "json")
+            export_results(self.test_output_dir, output_file, "json")
             
-            self.assertTrue(result)
+            # export_results doesn't return a value, check file was created instead
+            self.assertTrue(os.path.exists(output_file))
             self.assertTrue(os.path.exists(output_file))
             
-            # Check JSON content
+            # Check JSON content - export_results returns a list of results
             with open(output_file, 'r') as f:
                 data = json.load(f)
-                self.assertIsInstance(data, dict)
-                self.assertIn("summary", data)
+                self.assertIsInstance(data, list)
+                self.assertGreater(len(data), 0)
+                # Check structure of first result
+                if data:
+                    self.assertIn("file_info", data[0])
+                    self.assertIn("analysis", data[0])
     
     @patch('src.viewers.results_viewer.find_analysis_files')
     @patch('src.viewers.results_viewer.load_analysis_file')
@@ -227,12 +232,10 @@ class TestResultsViewer(unittest.TestCase):
         """Test main function with summary command"""
         # The function doesn't return anything, so we don't need to set return_value
         
-        with patch('sys.argv', ['results_viewer.py', '--summary']):
-            with patch('builtins.print') as mock_print:
-                main()
+        with patch('sys.argv', ['results_viewer.py', '--summary', '--directory', self.test_output_dir]):
+            main()
         
         mock_summary.assert_called_once()
-        mock_print.assert_called()
 
 if __name__ == '__main__':
     unittest.main() 

@@ -223,13 +223,13 @@ class TestWebInterface(unittest.TestCase):
             self.assertIn('status', data)
             self.assertIn('message', data)
     
-    @patch('src.viewers.web_interface_refactored.webbrowser.open')
+    @patch('src.viewers.web_interface.webbrowser.open')
     def test_open_browser(self, mock_browser):
         """Test browser opening"""
         self.interface._open_browser()
         mock_browser.assert_called_once_with('http://localhost:5050')
     
-    @patch('src.viewers.web_interface_refactored.DirectoryProcessor')
+    @patch('src.viewers.web_interface.DirectoryProcessor')
     def test_process_images_async_success(self, mock_processor):
         """Test async image processing success"""
         mock_processor_instance = MagicMock()
@@ -241,7 +241,7 @@ class TestWebInterface(unittest.TestCase):
         self.assertEqual(self.interface.processing_status['message'], 'Processing completed successfully!')
         mock_processor_instance.process_directory.assert_called_once()
     
-    @patch('src.viewers.web_interface_refactored.DirectoryProcessor')
+    @patch('src.viewers.web_interface.DirectoryProcessor')
     def test_process_images_async_error(self, mock_processor):
         """Test async image processing error"""
         mock_processor.side_effect = Exception('Processing error')

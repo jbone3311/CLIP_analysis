@@ -140,12 +140,19 @@ def init_main_routes(app, analysis_service: AnalysisService, image_service: Imag
         configured_models = db_manager.get_llm_models() if db_manager else []
         available_models = llm_manager.get_all_available_models() if llm_manager else []
         
-        # Check connection status (simplified for now)
-        ollama_connected = False
-        openai_connected = False
-        anthropic_connected = False
-        google_connected = False
-        grok_connected = False
+        # Check actual connection status using LLM manager
+        if llm_manager:
+            ollama_connected = llm_manager.test_ollama_connection()
+            openai_connected = llm_manager.test_openai_connection()
+            anthropic_connected = llm_manager.test_anthropic_connection()
+            google_connected = llm_manager.test_google_connection()
+            grok_connected = llm_manager.test_grok_connection()
+        else:
+            ollama_connected = False
+            openai_connected = False
+            anthropic_connected = False
+            google_connected = False
+            grok_connected = False
         
         return render_template('llm_config.html',
                              configured_models=configured_models,

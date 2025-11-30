@@ -55,6 +55,18 @@ class DatabaseManager:
                     UNIQUE(name, type)
                 )
             ''')
+            
+            # Migrate existing database: add prompts column if missing
+            try:
+                cursor = conn.execute("PRAGMA table_info(llm_models)")
+                columns = [row[1] for row in cursor.fetchall()]
+                if 'prompts' not in columns:
+                    logger.info("Migrating database: adding prompts column to llm_models table")
+                    conn.execute('ALTER TABLE llm_models ADD COLUMN prompts TEXT')
+                    conn.commit()
+            except sqlite3.Error as e:
+                logger.warning(f"Migration check failed: {e}")
+            
             conn.commit()
         logger.info("Database schema initialized successfully")
 
@@ -152,13 +164,14 @@ class DatabaseManager:
     def insert_llm_model(self, name: str, type: str, url: str = None, api_key: str = None, model_name: str = None, prompts: str = None):
         """Insert a new LLM model configuration"""
         with self.get_connection() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 '''INSERT OR REPLACE INTO llm_models
                 (name, type, url, api_key, model_name, prompts, is_active, date_added)
                 VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'))''',
                 (name, type, url, api_key, model_name, prompts)
             )
             conn.commit()
+            return cursor.lastrowid
 
     def get_llm_models(self) -> List[Dict[str, Any]]:
         """Get all LLM model configurations"""

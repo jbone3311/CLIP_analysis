@@ -743,7 +743,7 @@ def validate_api_key(api_key: str, api_url: str) -> bool:
         return False
 
 
-def test_clip_connection(api_url: str) -> bool:
+def check_clip_connection(api_url: str) -> bool:
     """Test connection to CLIP API"""
     import requests
     
@@ -754,7 +754,7 @@ def test_clip_connection(api_url: str) -> bool:
         return False
 
 
-def test_llm_connection(api_url: str, api_key: str, model_name: str) -> bool:
+def check_llm_connection(api_url: str, api_key: str, model_name: str) -> bool:
     """Test connection to LLM API"""
     import requests
     

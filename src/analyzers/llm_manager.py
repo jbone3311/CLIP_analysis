@@ -101,7 +101,7 @@ class LLMManager:
                 'name': 'GPT-4 Vision',
                 'type': 'openai',
                 'url': self.openai_url,
-                'model_name': 'gpt-4-vision-preview',
+                'model_name': 'gpt-4o',
                 'api_key_required': True
             }
         ]
@@ -381,6 +381,10 @@ class LLMManager:
     def test_openai_connection(self) -> bool:
         """Test connection to OpenAI API"""
         if not self.openai_api_key:
+            logger.debug("OpenAI API key not found")
+            return False
+        if self.openai_api_key.startswith('your_'):
+            logger.debug("OpenAI API key appears to be a placeholder")
             return False
         try:
             headers = {
@@ -388,8 +392,17 @@ class LLMManager:
                 'Content-Type': 'application/json'
             }
             response = requests.get(f"{self.openai_url}/models", headers=headers, timeout=10)
-            return response.status_code == 200
-        except Exception:
+            if response.status_code == 200:
+                logger.info("OpenAI API connection test successful")
+                return True
+            else:
+                logger.warning(f"OpenAI API connection test failed: HTTP {response.status_code} - {response.text[:200]}")
+                return False
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"OpenAI API connection test failed: {type(e).__name__}: {e}")
+            return False
+        except Exception as e:
+            logger.warning(f"OpenAI API connection test failed: {type(e).__name__}: {e}")
             return False
 
     def test_anthropic_connection(self) -> bool:
@@ -517,9 +530,10 @@ class LLMManager:
                 "provider": "ollama"
             }
     
-    def analyze_with_openai(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_openai(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using OpenAI"""
-        if not self.openai_api_key:
+        effective_key = api_key or self.openai_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "OpenAI API key not configured",
@@ -556,7 +570,7 @@ class LLMManager:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.openai_api_key}',
+                'Authorization': f'Bearer {effective_key}',
                 'Content-Type': 'application/json'
             }
             
@@ -592,9 +606,10 @@ class LLMManager:
                 "provider": "openai"
             }
     
-    def analyze_with_anthropic(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_anthropic(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Anthropic Claude"""
-        if not self.anthropic_api_key:
+        effective_key = api_key or self.anthropic_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Anthropic API key not configured",
@@ -633,7 +648,7 @@ class LLMManager:
             }
             
             headers = {
-                'x-api-key': self.anthropic_api_key,
+                'x-api-key': effective_key,
                 'Content-Type': 'application/json',
                 'anthropic-version': '2023-06-01'
             }
@@ -670,9 +685,10 @@ class LLMManager:
                 "provider": "anthropic"
             }
 
-    def analyze_with_google(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_google(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Google Gemini"""
-        if not self.google_api_key:
+        effective_key = api_key or self.google_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Google API key not configured",
@@ -708,7 +724,7 @@ class LLMManager:
             }
             
             response = requests.post(
-                f"{self.google_url}/models/{model_name}:generateContent?key={self.google_api_key}",
+                f"{self.google_url}/models/{model_name}:generateContent?key={effective_key}",
                 json=payload,
                 timeout=60
             )
@@ -738,9 +754,10 @@ class LLMManager:
                 "provider": "google"
             }
 
-    def analyze_with_grok(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_grok(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Grok (xAI)"""
-        if not self.grok_api_key:
+        effective_key = api_key or self.grok_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Grok API key not configured",
@@ -777,7 +794,7 @@ class LLMManager:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.grok_api_key}',
+                'Authorization': f'Bearer {effective_key}',
                 'Content-Type': 'application/json'
             }
             
@@ -813,9 +830,10 @@ class LLMManager:
                 "provider": "grok"
             }
 
-    def analyze_with_cohere(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_cohere(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Cohere"""
-        if not self.cohere_api_key:
+        effective_key = api_key or self.cohere_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Cohere API key not configured",
@@ -837,7 +855,7 @@ class LLMManager:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.cohere_api_key}',
+                'Authorization': f'Bearer {effective_key}',
                 'Content-Type': 'application/json'
             }
             
@@ -873,9 +891,10 @@ class LLMManager:
                 "provider": "cohere"
             }
 
-    def analyze_with_mistral(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_mistral(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Mistral"""
-        if not self.mistral_api_key:
+        effective_key = api_key or self.mistral_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Mistral API key not configured",
@@ -912,7 +931,7 @@ class LLMManager:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.mistral_api_key}',
+                'Authorization': f'Bearer {effective_key}',
                 'Content-Type': 'application/json'
             }
             
@@ -948,9 +967,10 @@ class LLMManager:
                 "provider": "mistral"
             }
 
-    def analyze_with_perplexity(self, image_path: str, prompt: str, model_name: str) -> Dict[str, Any]:
+    def analyze_with_perplexity(self, image_path: str, prompt: str, model_name: str, api_key: str = None) -> Dict[str, Any]:
         """Analyze image using Perplexity"""
-        if not self.perplexity_api_key:
+        effective_key = api_key or self.perplexity_api_key
+        if not effective_key:
             return {
                 "status": "error",
                 "message": "Perplexity API key not configured",
@@ -987,7 +1007,7 @@ class LLMManager:
             }
             
             headers = {
-                'Authorization': f'Bearer {self.perplexity_api_key}',
+                'Authorization': f'Bearer {effective_key}',
                 'Content-Type': 'application/json'
             }
             
@@ -1028,22 +1048,83 @@ class LLMManager:
         model_type = model_config.get('type')
         model_name = model_config.get('model_name')
         
+        # Use API key from model_config if available, otherwise use instance API keys
+        # This allows models to have their own API keys stored in the database
+        api_key = model_config.get('api_key')
+        
         if model_type == 'ollama':
             return self.analyze_with_ollama(image_path, prompt, model_name)
         elif model_type == 'openai':
-            return self.analyze_with_openai(image_path, prompt, model_name)
+            # Use API key from model_config or fall back to instance key
+            effective_key = api_key or self.openai_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "OpenAI API key not configured. Please set OPENAI_API_KEY in .env or configure the model.",
+                    "model": model_name,
+                    "provider": "openai"
+                }
+            return self.analyze_with_openai(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'anthropic':
-            return self.analyze_with_anthropic(image_path, prompt, model_name)
+            effective_key = api_key or self.anthropic_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Anthropic API key not configured",
+                    "model": model_name,
+                    "provider": "anthropic"
+                }
+            return self.analyze_with_anthropic(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'google':
-            return self.analyze_with_google(image_path, prompt, model_name)
+            effective_key = api_key or self.google_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Google API key not configured",
+                    "model": model_name,
+                    "provider": "google"
+                }
+            return self.analyze_with_google(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'grok':
-            return self.analyze_with_grok(image_path, prompt, model_name)
+            effective_key = api_key or self.grok_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Grok API key not configured",
+                    "model": model_name,
+                    "provider": "grok"
+                }
+            return self.analyze_with_grok(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'cohere':
-            return self.analyze_with_cohere(image_path, prompt, model_name)
+            effective_key = api_key or self.cohere_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Cohere API key not configured",
+                    "model": model_name,
+                    "provider": "cohere"
+                }
+            return self.analyze_with_cohere(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'mistral':
-            return self.analyze_with_mistral(image_path, prompt, model_name)
+            effective_key = api_key or self.mistral_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Mistral API key not configured",
+                    "model": model_name,
+                    "provider": "mistral"
+                }
+            return self.analyze_with_mistral(image_path, prompt, model_name, api_key=effective_key)
         elif model_type == 'perplexity':
-            return self.analyze_with_perplexity(image_path, prompt, model_name)
+            effective_key = api_key or self.perplexity_api_key
+            if not effective_key:
+                return {
+                    "status": "error",
+                    "message": "Perplexity API key not configured",
+                    "model": model_name,
+                    "provider": "perplexity"
+                }
+            return self.analyze_with_perplexity(image_path, prompt, model_name, api_key=effective_key)
         else:
             return {
                 "status": "error",

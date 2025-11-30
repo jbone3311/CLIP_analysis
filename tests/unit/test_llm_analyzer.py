@@ -43,7 +43,7 @@ class TestLLMAnalyzer(unittest.TestCase):
             'title': 'Test OpenAI Model',
             'api_url': 'https://api.openai.com/v1/chat/completions',
             'api_key': 'test_key_123',
-            'model_name': 'gpt-4-vision-preview'
+            'model_name': 'gpt-4o'
         }
     ])
     @patch('src.analyzers.llm_analyzer.PROMPTS', {
@@ -176,7 +176,7 @@ class TestLLMAnalyzer(unittest.TestCase):
             'title': 'Test OpenAI Model',
             'api_url': 'https://api.openai.com/v1/chat/completions',
             'api_key': 'test_key_123',
-            'model_name': 'gpt-4-vision-preview'
+            'model_name': 'gpt-4o'
         }
     ])
     @patch('src.analyzers.llm_analyzer.PROMPTS', {
@@ -217,7 +217,7 @@ class TestLLMAnalyzer(unittest.TestCase):
             'title': 'Test OpenAI Model',
             'api_url': 'https://api.openai.com/v1/chat/completions',
             'api_key': 'test_key_123',
-            'model_name': 'gpt-4-vision-preview'
+            'model_name': 'gpt-4o'
         }
     ])
     @patch('src.analyzers.llm_analyzer.PROMPTS', {
@@ -261,7 +261,7 @@ class TestLLMAnalyzer(unittest.TestCase):
             'title': 'Test OpenAI Model',
             'api_url': 'https://api.openai.com/v1/chat/completions',
             'api_key': 'test_key_123',
-            'model_name': 'gpt-4-vision-preview'
+            'model_name': 'gpt-4o'
         }
     ])
     @patch('src.analyzers.llm_analyzer.PROMPTS', {

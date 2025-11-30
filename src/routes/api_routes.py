@@ -119,13 +119,40 @@ def init_api_routes(app, analysis_service: AnalysisService, image_service: Image
     def api_llm_add():
         """API endpoint to add LLM model"""
         try:
+            from src.config.config_manager import get_config_value
+            import os
+            
             data = request.get_json()
-            model_id = db_manager.add_llm_model(
-                provider=data['provider'],
-                model_name=data['model_name'],
-                prompts=data.get('prompts', {})
+            
+            # Get API key from environment based on provider type
+            provider = data.get('type', data.get('provider', ''))
+            api_key = None
+            
+            # Map provider types to environment variable names
+            api_key_map = {
+                'openai': 'OPENAI_API_KEY',
+                'anthropic': 'ANTHROPIC_API_KEY',
+                'google': 'GOOGLE_API_KEY',
+                'grok': 'GROK_API_KEY',
+                'cohere': 'COHERE_API_KEY',
+                'mistral': 'MISTRAL_API_KEY',
+                'perplexity': 'PERPLEXITY_API_KEY'
+            }
+            
+            if provider in api_key_map:
+                api_key = get_config_value(api_key_map[provider]) or os.getenv(api_key_map[provider])
+            
+            # Use insert_llm_model instead of add_llm_model
+            db_manager.insert_llm_model(
+                name=data.get('name', ''),
+                type=provider,
+                url=data.get('url'),
+                api_key=api_key,
+                model_name=data.get('model_name'),
+                prompts=json.dumps(data.get('prompts', {})) if isinstance(data.get('prompts'), dict) else data.get('prompts')
             )
-            return jsonify({'status': 'success', 'model_id': model_id})
+            
+            return jsonify({'status': 'success', 'message': 'Model added successfully'})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     

@@ -1,0 +1,46 @@
+# Files and directories that AI tools should NOT edit
+# This prevents AI from modifying sensitive or user-specific files
+
+# Environment files - NEVER edit these
+.env
+.env.local
+.env.*.local
+
+# User-specific configuration
+config.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+app.log
+errors.log
+
+# Output directories (user's data)
+Output/
+Images/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+

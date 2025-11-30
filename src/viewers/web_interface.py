@@ -12,7 +12,7 @@ import webbrowser
 import threading
 import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, flash
 from werkzeug.utils import secure_filename
@@ -208,10 +208,141 @@ class WebInterface:
         def status():
             """Get processing status"""
             return jsonify(self.processing_status)
+        
+        @self.app.route('/api/process/image', methods=['POST'])
+        def api_process_image():
+            """API endpoint to process a single image"""
+            try:
+                data = request.get_json()
+                image_path = data.get('image_path')
+                force_reprocess = data.get('force_reprocess', False)
+                
+                if not image_path:
+                    return jsonify({'status': 'error', 'message': 'No image path provided'}), 400
+                
+                # Convert relative path to full path if needed
+                if not os.path.isabs(image_path):
+                    # Assume it's relative to Images folder
+                    full_path = os.path.join(self.project_root, 'Images', image_path)
+                    if not os.path.exists(full_path):
+                        # Try as-is
+                        full_path = image_path
+                else:
+                    full_path = image_path
+                
+                # Validate the file exists
+                if not os.path.exists(full_path):
+                    return jsonify({'status': 'error', 'message': f'Image file not found: {full_path}'}), 404
+                
+                # Check if processing is already in progress
+                if self.processing_status.get('status') == 'processing':
+                    return jsonify({'status': 'error', 'message': 'Processing already in progress'}), 409
+                
+                # Start processing in background
+                self.processing_status['status'] = 'processing'
+                self.processing_status['message'] = f'Processing {os.path.basename(full_path)}...'
+                self.processing_status['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                
+                thread = threading.Thread(target=self._process_single_image_async, args=(full_path, force_reprocess))
+                thread.daemon = True
+                thread.start()
+                self.processing_threads[full_path] = thread
+                
+                return jsonify({'status': 'success', 'message': 'Processing started'})
+            except Exception as e:
+                logger.error(f"Error in api_process_image: {e}")
+                return jsonify({'status': 'error', 'message': str(e)}), 500
+        
+        @self.app.route('/api/process/images', methods=['POST'])
+        def api_process_images():
+            """API endpoint to process multiple selected images"""
+            try:
+                data = request.get_json()
+                image_paths = data.get('image_paths', [])
+                force_reprocess = data.get('force_reprocess', False)
+                
+                if not image_paths or len(image_paths) == 0:
+                    return jsonify({'status': 'error', 'message': 'No images selected'}), 400
+                
+                # Convert relative paths to full paths if needed
+                full_paths = []
+                for image_path in image_paths:
+                    if not os.path.isabs(image_path):
+                        # Assume it's relative to Images folder
+                        full_path = os.path.join(self.project_root, 'Images', image_path)
+                        if not os.path.exists(full_path):
+                            # Try as-is
+                            full_path = image_path
+                    else:
+                        full_path = image_path
+                    
+                    # Validate the file exists
+                    if os.path.exists(full_path):
+                        full_paths.append(full_path)
+                    else:
+                        logger.warning(f"Image file not found, skipping: {full_path}")
+                
+                if len(full_paths) == 0:
+                    return jsonify({'status': 'error', 'message': 'No valid image files found'}), 404
+                
+                # Check if processing is already in progress
+                if self.processing_status.get('status') == 'processing':
+                    return jsonify({'status': 'error', 'message': 'Processing already in progress'}), 409
+                
+                # Start processing in background
+                self.processing_status['status'] = 'processing'
+                self.processing_status['message'] = f'Processing {len(full_paths)} image(s)...'
+                self.processing_status['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
+                
+                thread = threading.Thread(target=self._process_multiple_images_async, args=(full_paths, force_reprocess))
+                thread.daemon = True
+                thread.start()
+                self.processing_threads['selected'] = thread
+                
+                return jsonify({'status': 'success', 'message': f'Processing started for {len(full_paths)} image(s)'})
+            except Exception as e:
+                logger.error(f"Error in api_process_images: {e}")
+                return jsonify({'status': 'error', 'message': str(e)}), 500
+    
+    def _ensure_openai_configured(self):
+        """Ensure OpenAI model is configured in database if API key exists"""
+        try:
+            from src.config.config_manager import get_config_value
+            import os
+            
+            # Check if OpenAI API key exists
+            openai_key = get_config_value('OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY')
+            if not openai_key or openai_key.startswith('your_'):
+                return False
+            
+            # Check if OpenAI model already exists
+            existing_models = self.db_manager.get_llm_models()
+            openai_models = [m for m in existing_models if m.get('type') == 'openai']
+            if openai_models:
+                return True  # Already configured
+            
+            # Auto-add OpenAI GPT-4 Vision model
+            self.db_manager.insert_llm_model(
+                name='GPT-4 Vision',
+                type='openai',
+                url='https://api.openai.com/v1',
+                api_key=openai_key,
+                model_name='gpt-4o',
+                prompts=None
+            )
+            logger.info("Auto-configured OpenAI GPT-4 Vision model")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to auto-configure OpenAI: {e}")
+            return False
     
     def _process_images_async(self, force_reprocess: bool = False):
         """Process images in background thread"""
         try:
+            # Ensure OpenAI is configured if API key exists
+            if self.config_service.get_config().get('ENABLE_LLM_ANALYSIS', True):
+                self._ensure_openai_configured()
+            
             config = self.config_service.get_processing_config()
             # Override force reprocess if specified
             if force_reprocess:
@@ -223,6 +354,55 @@ class WebInterface:
         except Exception as e:
             self.processing_status['status'] = 'error'
             self.processing_status['message'] = f'Error during processing: {str(e)}'
+    
+    def _process_single_image_async(self, image_path: str, force_reprocess: bool = False):
+        """Process a single image in background thread"""
+        try:
+            # Ensure OpenAI is configured if API key exists
+            if self.config_service.get_config().get('ENABLE_LLM_ANALYSIS', True):
+                self._ensure_openai_configured()
+            
+            config = self.config_service.get_processing_config()
+            if force_reprocess:
+                config['FORCE_REPROCESS'] = True
+            processor = DirectoryProcessor(config)
+            success = processor.process_image(image_path)
+            if success:
+                self.processing_status['status'] = 'completed'
+                self.processing_status['message'] = f'Successfully processed {os.path.basename(image_path)}'
+            else:
+                self.processing_status['status'] = 'error'
+                self.processing_status['message'] = f'Failed to process {os.path.basename(image_path)}'
+        except Exception as e:
+            self.processing_status['status'] = 'error'
+            self.processing_status['message'] = f'Error processing {os.path.basename(image_path)}: {str(e)}'
+    
+    def _process_multiple_images_async(self, image_paths: List[str], force_reprocess: bool = False):
+        """Process multiple images in background thread"""
+        try:
+            # Ensure OpenAI is configured if API key exists
+            if self.config_service.get_config().get('ENABLE_LLM_ANALYSIS', True):
+                self._ensure_openai_configured()
+            
+            config = self.config_service.get_processing_config()
+            if force_reprocess:
+                config['FORCE_REPROCESS'] = True
+            processor = DirectoryProcessor(config)
+            
+            success_count = 0
+            for image_path in image_paths:
+                try:
+                    self.processing_status['message'] = f'Processing {os.path.basename(image_path)} ({success_count + 1}/{len(image_paths)})...'
+                    if processor.process_image(image_path):
+                        success_count += 1
+                except Exception as e:
+                    logger.error(f"Error processing {image_path}: {e}")
+            
+            self.processing_status['status'] = 'completed'
+            self.processing_status['message'] = f'Successfully processed {success_count}/{len(image_paths)} image(s)'
+        except Exception as e:
+            self.processing_status['status'] = 'error'
+            self.processing_status['message'] = f'Error during batch processing: {str(e)}'
     
     def _open_browser(self):
         """Open browser after a short delay"""
@@ -262,6 +442,17 @@ def create_app():
     interface = WebInterface()
     return interface.app
 
+# Export app for backward compatibility with tests
+_interface = None
+def get_app():
+    """Get or create the Flask app instance"""
+    global _interface
+    if _interface is None:
+        _interface = WebInterface()
+    return _interface.app
+
+# Create app instance for direct import
+app = get_app()
 
 if __name__ == '__main__':
     interface = WebInterface()

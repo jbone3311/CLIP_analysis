@@ -112,16 +112,34 @@ class TestImageService(unittest.TestCase):
         self.assertFalse(self.service._allowed_file(''))
     
     @patch('src.services.image_service.Image.open')
-    def test_create_thumbnail_success(self, mock_image):
+    @patch('os.path.exists', return_value=True)
+    @patch('os.path.getsize', return_value=1024)
+    def test_create_thumbnail_success(self, mock_getsize, mock_exists, mock_image):
         """Test creating thumbnail successfully"""
+        # Create a proper mock image with context manager support
         mock_img = MagicMock()
         mock_img.mode = 'RGB'
-        mock_img.thumbnail.return_value = None
-        mock_img.save.return_value = None
-        mock_image.return_value.__enter__.return_value = mock_img
+        mock_img.verify = MagicMock()
+        mock_img.convert = MagicMock(return_value=mock_img)
+        mock_img.thumbnail = MagicMock()
+        mock_img.save = MagicMock()
         
-        result = self.service._create_thumbnail('test.jpg')
-        self.assertIsNotNone(result)
+        # Mock the context manager behavior
+        mock_context = MagicMock()
+        mock_context.__enter__ = MagicMock(return_value=mock_img)
+        mock_context.__exit__ = MagicMock(return_value=False)
+        mock_image.return_value = mock_context
+        
+        # Mock BytesIO for base64 encoding
+        with patch('io.BytesIO') as mock_bytesio:
+            mock_buffer = MagicMock()
+            mock_buffer.getvalue.return_value = b'fake_image_data'
+            mock_buffer.seek = MagicMock()
+            mock_bytesio.return_value = mock_buffer
+            
+            result = self.service._create_thumbnail('test.jpg')
+            self.assertIsNotNone(result)
+            self.assertIsInstance(result, str)  # Should be base64 string
     
     @patch('src.services.image_service.Image.open')
     def test_create_thumbnail_error(self, mock_image):

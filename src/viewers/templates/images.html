@@ -51,7 +51,15 @@
                     <i class="fas fa-th me-2"></i>
                     Image Gallery
                 </h5>
-                <div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-success" id="processSelectedBtn" onclick="processSelected()" disabled>
+                        <i class="fas fa-cogs me-1"></i>
+                        Process Selected (<span id="selectedCount">0</span>)
+                    </button>
+                    <button class="btn btn-sm btn-warning" id="reprocessSelectedBtn" onclick="reprocessSelected()" disabled>
+                        <i class="fas fa-redo me-1"></i>
+                        Reprocess Selected
+                    </button>
                     <span class="badge bg-primary" id="imageCount">{{ images|length }} images</span>
                 </div>
             </div>
@@ -61,9 +69,16 @@
                         {% for image in images %}
                         <div class="col-md-4 col-lg-3 mb-4 image-item" 
                              data-filename="{{ image.filename|lower }}"
-                             data-folder="{{ image.path.split('/')[0] if '/' in image.path else '' }}">
+                             data-folder="{{ image.path.split('/')[0] if '/' in image.path else '' }}"
+                             data-image-path="{{ image.path }}">
                             <div class="card h-100">
-                                <div class="card-img-top" style="height: 200px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                <div class="card-img-top position-relative" style="height: 200px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <input type="checkbox" class="form-check-input image-checkbox" 
+                                               value="{{ image.path }}" 
+                                               onchange="updateSelection()"
+                                               style="width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                                    </div>
                                     {% if image.thumbnail %}
                                         <img src="{{ image.thumbnail }}" alt="{{ image.filename }}" 
                                              class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: cover;">
@@ -143,10 +158,14 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="{{ url_for('process') }}" class="btn btn-primary">
+                <button type="button" class="btn btn-primary" id="processImageBtn" onclick="processSingleImage()">
                     <i class="fas fa-cogs me-2"></i>
                     Process This Image
-                </a>
+                </button>
+                <button type="button" class="btn btn-warning" id="reprocessImageBtn" onclick="reprocessSingleImage()">
+                    <i class="fas fa-redo me-2"></i>
+                    Reprocess This Image
+                </button>
             </div>
         </div>
     </div>
@@ -243,8 +262,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 });
 
+// Store current image info for processing
+let currentImagePath = null;
+
 // Show image information
 function showImageInfo(filename, path, size, modified) {
+    currentImagePath = path;
     const modalElement = document.getElementById('imageInfoModal');
     // Get existing instance or create new one
     let modal = bootstrap.Modal.getInstance(modalElement);
@@ -285,6 +308,141 @@ function showImageInfo(filename, path, size, modified) {
     `;
     
     modal.show();
+}
+
+// Process single image
+function processSingleImage() {
+    if (!currentImagePath) return;
+    
+    fetch('/api/process/image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_path: currentImagePath, force_reprocess: false })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Processing started! Check the process page for status.');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('imageInfoModal'));
+            modal.hide();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to start processing'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Reprocess single image
+function reprocessSingleImage() {
+    if (!currentImagePath) return;
+    
+    if (!confirm('Are you sure you want to reprocess this image? This will overwrite existing analysis.')) {
+        return;
+    }
+    
+    fetch('/api/process/image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_path: currentImagePath, force_reprocess: true })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Reprocessing started! Check the process page for status.');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('imageInfoModal'));
+            modal.hide();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to start reprocessing'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Update selection count
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.image-checkbox:checked');
+    const count = checkboxes.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('processSelectedBtn').disabled = count === 0;
+    document.getElementById('reprocessSelectedBtn').disabled = count === 0;
+}
+
+// Process selected images
+function processSelected() {
+    const checkboxes = document.querySelectorAll('.image-checkbox:checked');
+    const imagePaths = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (imagePaths.length === 0) {
+        alert('Please select at least one image.');
+        return;
+    }
+    
+    fetch('/api/process/images', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_paths: imagePaths, force_reprocess: false })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`Processing started for ${imagePaths.length} image(s)! Check the process page for status.`);
+            // Clear selection
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelection();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to start processing'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Reprocess selected images
+function reprocessSelected() {
+    const checkboxes = document.querySelectorAll('.image-checkbox:checked');
+    const imagePaths = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (imagePaths.length === 0) {
+        alert('Please select at least one image.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to reprocess ${imagePaths.length} image(s)? This will overwrite existing analysis.`)) {
+        return;
+    }
+    
+    fetch('/api/process/images', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image_paths: imagePaths, force_reprocess: true })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(`Reprocessing started for ${imagePaths.length} image(s)! Check the process page for status.`);
+            // Clear selection
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelection();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to start reprocessing'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
 }
 
 // Delete image functionality
